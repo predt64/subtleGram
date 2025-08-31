@@ -6,7 +6,6 @@
 ![Vue](https://img.shields.io/badge/Vue-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
 
 ## 🚀 Стек технологий
 
@@ -17,28 +16,15 @@
 - **Tailwind CSS** - Utility-first CSS фреймворк
 - **Pinia** - Современное управление состоянием для Vue
 
-### Backend (планируется)
-- **Node.js** - JavaScript runtime
-- **Express** - Веб-фреймворк для Node.js
-- **TypeScript** - Типизированная разработка
-- **Multer** - Загрузка файлов
-- **subtitle** - Парсинг SRT файлов
-
-### AI & APIs
-- **Hugging Face API** - ИИ анализ текста
-- **Urban Dictionary API** - Объяснение сленга
-- **Axios** - HTTP клиент
-
 ### Архитектура
 - **Feature-Sliced Design (FSD)** - Архитектурная методология
-- **REST API** - Взаимодействие фронт/бэк
-- **Монолитный репозиторий** - Frontend и Backend в одном репо
+- **Монолитный frontend** - Vue.js приложение
 
 ## 📁 Структура проекта
 
 ```
 subtleGram/
-├── front/                 # Nuxt frontend
+├── front/                 # Nuxt приложение
 │   ├── src/
 │   │   ├── app/          # Приложение (layouts, providers, styles)
 │   │   ├── entities/     # FSD: бизнес-сущности
@@ -48,12 +34,8 @@ subtleGram/
 │   ├── nuxt.config.ts    # Конфигурация Nuxt
 │   ├── tailwind.config.ts # Конфигурация Tailwind
 │   └── package.json      # Зависимости frontend
-├── back/                 # Express backend (в разработке)
-│   ├── src/
-│   ├── routes/
-│   └── package.json      # Зависимости backend
-├── .cursor/              # IDE настройки
-└── README.md            # Этот файл
+└── back/                 # Backend (планируется)
+    └── ...              # Express API сервер
 ```
 
 ## ✨ Основные возможности
@@ -76,31 +58,21 @@ npm run dev
 
 Приложение будет доступно на http://localhost:3000
 
-### Backend (планируется)
-```bash
-cd back
-npm install
-npm run dev
-```
-
 ### Сборка для продакшена
 ```bash
-cd front
 npm run build
 npm run preview
 ```
 
 ## 📝 Roadmap
 
-- [x] Базовая структура проекта
-- [x] Настройка монолитного репозитория
+- [ ] Базовая структура проекта ✅
 - [ ] Парсинг SRT файлов
 - [ ] ИИ анализ фраз
 - [ ] Интерактивный UI
 - [ ] Поиск по субтитрам
 - [ ] Мобильная версия
 - [ ] Кэширование анализов
-- [ ] Backend API
 
 ## 🤝 Contributing
 

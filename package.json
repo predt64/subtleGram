@@ -1,21 +1,28 @@
 {
-  "name": "nuxt-app",
-  "type": "module",
-  "private": true,
+  "name": "subtlegram",
+  "version": "1.0.0",
+  "description": "Interactive subtitle analyzer for English language learning",
+  "main": "index.js",
+  "workspaces": [
+    "front",
+    "back"
+  ],
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "dev": "concurrently \"npm run dev --workspace=front\" \"npm run dev --workspace=back\"",
+    "build": "npm run build --workspace=front && npm run build --workspace=back",
+    "install:all": "npm install && npm install --workspace=front && npm install --workspace=back"
   },
-  "dependencies": {
-    "@nuxtjs/tailwindcss": "^6.14.0",
-    "@pinia/nuxt": "^0.11.2",
-    "nuxt": "^4.0.3",
-    "pinia": "^3.0.3",
-    "pinia-plugin-persistedstate": "^4.5.0",
-    "vue": "^3.5.20",
-    "vue-router": "^4.5.1"
+  "keywords": [
+    "subtitles",
+    "analysis",
+    "english-learning",
+    "nuxt",
+    "vue",
+    "ai"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
   }
 }
