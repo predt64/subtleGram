@@ -50,11 +50,33 @@ pids/
 
 # Coverage directory used by tools like istanbul
 coverage/
+*.lcov
 
 # Build outputs
 build/
 dist/
 .next/
+
+# TypeScript
+*.tsbuildinfo
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+
+# Vim
+.vimrc.local
+
+# Emacs
+\#*\#
+.\#*
+
+# nyc test coverage
+.nyc_output
 
 # Temporary folders
 tmp/
