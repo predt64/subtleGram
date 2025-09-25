@@ -1,9 +1,8 @@
 import { SubtitleEntry, Token } from '../types';
-import { extractSentences } from './sentenceUtils';
 
 /**
  * Утилита для токенизации субтитров
- * Разбивает текст на токены и работает с предложениями
+ * Разбивает текст на токены
  */
 export function tokenizeSubtitles(subtitles: SubtitleEntry[]): Token[] {
   const tokens: Token[] = [];
@@ -16,14 +15,12 @@ export function tokenizeSubtitles(subtitles: SubtitleEntry[]): Token[] {
 
     words.forEach(word => {
       if (word.trim()) {
-        const norm = word.replace(/'m$/, ' am').replace(/'s$/, ' is').replace(/'re$/, ' are').replace(/'ll$/, ' will');
         tokens.push({
           id: globalId++,
           entryIndex,
           charStart: charOffset + localCharPos,
           charEnd: charOffset + localCharPos + word.length,
-          text: word,
-          norm
+          text: word
         });
         localCharPos += word.length + 1;
       }
@@ -34,15 +31,3 @@ export function tokenizeSubtitles(subtitles: SubtitleEntry[]): Token[] {
   return tokens;
 }
 
-export function extractSentenceFromPosition(subtitles: SubtitleEntry[], position: number): string {
-  const tokens = tokenizeSubtitles(subtitles);
-  const token = tokens.find(t => position >= t.charStart && position < t.charEnd);
-  if (!token) return '';
-
-  const entry = subtitles[token.entryIndex];
-  if (!entry) return '';
-
-  const sentences = extractSentences(entry.text);
-  const sentenceIndex = sentences.findIndex(s => s.includes(token.text));
-  return sentenceIndex >= 0 ? (sentences[sentenceIndex] || entry.text) : entry.text;
-}

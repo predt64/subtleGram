@@ -76,7 +76,7 @@ async function runIntegrationTests() {
     ];
     const tokens = tokenizeSubtitles(mockSubtitles);
     console.log('   AI Response: Tokens created:', tokens);
-    if (tokens.length === 4 && tokens[0]?.text === 'Hello' && tokens[2]?.norm === 'I am') {
+    if (tokens.length === 4 && tokens[0]?.text === 'Hello' && tokens[2]?.text === "I'm") {
       console.log('✅ Tokenization works:', tokens.length, 'tokens created');
       passed++;
     } else {

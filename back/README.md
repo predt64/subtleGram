@@ -50,9 +50,9 @@ src/
 │   └── slangService.ts        # Интеграция с Urban Dictionary
 ├── utils/               # Утилиты
 │   ├── config.ts              # Централизованная конфигурация
-│   ├── tokenization.ts        # Разбиение текста на токены
-│   ├── sentenceUtils.ts       # Работа с предложениями
+│   └── tokenization.ts        # Разбиение текста на токены
 │   └── validation.ts          # Валидация данных
+│   └── sentenceUtils.ts        # @deprecated - больше не используется
 ├── types/               # TypeScript типы
 │   └── index.ts               # Все определения типов
 └── index.ts             # Точка входа Express сервера

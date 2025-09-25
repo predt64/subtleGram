@@ -229,7 +229,6 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
           "charStart": 0,
           "charEnd": 1,
           "text": "I",
-          "norm": "I"
         },
         {
           "id": 1,
@@ -237,7 +236,6 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
           "charStart": 2,
           "charEnd": 7,
           "text": "gotta",
-          "norm": "gotta"
         },
         {
           "id": 2,
@@ -245,7 +243,6 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
           "charStart": 8,
           "charEnd": 11,
           "text": "go",
-          "norm": "go"
         },
         {
           "id": 3,
@@ -253,7 +250,6 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
           "charStart": 12,
           "charEnd": 17,
           "text": "home",
-          "norm": "home"
         },
         {
           "id": 4,
@@ -261,7 +257,6 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
           "charStart": 18,
           "charEnd": 22,
           "text": "now",
-          "norm": "now"
         },
         {
           "id": 5,
@@ -269,7 +264,6 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
           "charStart": 22,
           "charEnd": 23,
           "text": ".",
-          "norm": "."
         }
       ],
       "segments": [
@@ -482,7 +476,6 @@ curl -X GET http://localhost:3001/api/subtitles/health
   charStart: number;  // Начальная позиция в тексте
   charEnd: number;    // Конечная позиция в тексте
   text: string;       // Оригинальный текст
-  norm: string;       // Нормализованный текст
 }
 ```
 
@@ -550,7 +543,7 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
 # Слишком много запросов
 curl -X POST http://localhost:3001/api/subtitles/analyze \
   -H "Content-Type: application/json" \
-  -d '{"subtitles":[],"position":0}'
+  -d '{"subtitles":[],"sentenceText":"I gotta go."}'
 
 # Ответ: 429 Too Many Requests
 ```

@@ -52,7 +52,6 @@
     "eslint": "^8.50.0",
     "nodemon": "^3.0.1",
     "prettier": "^3.0.3",
-    "sentence-splitter": "^5.0.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
   }
