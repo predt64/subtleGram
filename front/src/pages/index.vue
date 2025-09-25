@@ -1,14 +1,241 @@
 <template>
-  <div class="flex flex-col justify-center items-center bg-gray-100 min-h-screen">
-    <h1 class="mb-8 font-bold text-gray-800 text-4xl">
-      Добро пожаловать!
-    </h1>
+  <div
+    class="relative flex flex-col justify-center items-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 min-h-screen overflow-hidden text-center"
+  >
+    <!-- Фоновое свечение -->
+    <div
+      class="top-0 left-1/2 absolute bg-gradient-radial from-blue-500/20 via-purple-500/10 to-transparent opacity-70 blur-3xl rounded-full w-96 h-96 -translate-x-1/2 -translate-y-1/2 transform"
+    ></div>
 
-    <NuxtLink
-      to="/second"
-      class="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-lg text-white transition-colors"
-    >
-      Перейти на вторую страницу
-    </NuxtLink>
+    <!-- Главный заголовок SubtleGram -->
+    <header class="z-10 mb-16">
+      <h1
+        class="bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 mb-4 font-bold text-transparent text-6xl md:text-7xl lg:text-8xl glowing-text"
+      >
+        SubtleGram
+      </h1>
+      <p
+        class="mx-auto max-w-2xl text-slate-300 text-xl md:text-2xl leading-relaxed"
+      >
+        Интерактивный анализ субтитров
+      </p>
+    </header>
+
+    <!-- Основной блок -->
+    <main class="z-10 w-full max-w-4xl">
+      <div
+        class="bg-slate-800/50 shadow-2xl backdrop-blur-sm p-8 md:p-12 border border-slate-700/50 rounded-3xl"
+      >
+        <!-- Заголовок -->
+        <h2
+          class="mb-6 font-semibold text-white text-3xl md:text-4xl lg:text-5xl leading-tight"
+        >
+          Перетащите субтитры и начните анализ в одно касание
+        </h2>
+
+        <!-- Описание -->
+        <p
+          class="mx-auto mb-12 max-w-2xl text-slate-300 text-lg leading-relaxed"
+        >
+          Поддерживаем форматы SRT, VTT и TXT до 10MB. Мы проверим файл,
+          разобьём субтитры и подготовим их к анализу.
+        </p>
+
+        <!-- Зона загрузки -->
+        <div class="mb-8">
+          <h3
+            class="mb-6 font-medium text-slate-400 text-sm uppercase tracking-wider"
+          >
+            Загрузка субтитров
+          </h3>
+
+          <!-- Drag & Drop зона -->
+          <div
+            class="group relative"
+            @dragover.prevent="handleDragOver"
+            @dragleave.prevent="handleDragLeave"
+            @drop.prevent="handleDrop"
+          >
+            <!-- Текстовый контент (статичный) -->
+            <div class="z-20 relative p-8 md:p-12 text-center">
+              <!-- Иконка -->
+              <div class="mx-auto mb-6 w-16 h-16 text-blue-400">
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
+                </svg>
+              </div>
+
+              <!-- Динамический контент в зависимости от состояния -->
+              <template v-if="isUploading">
+                <div class="inline-flex items-center gap-2 mb-2 text-blue-300">
+                  <div class="border-2 border-t-transparent border-blue-400 rounded-full w-5 h-5 animate-spin"></div>
+                  <span class="font-medium text-sm"> Загружаем файл… </span>
+                </div>
+                <p class="text-slate-400 text-sm">
+                  Пожалуйста, подождите, файл обрабатывается
+                </p>
+              </template>
+
+              <template v-else-if="hasSubtitles">
+                <div class="mb-6">
+                  <div class="inline-flex items-center gap-2 bg-green-500/20 mb-4 px-4 py-2 rounded-full font-medium text-green-300 text-sm">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 0116 0zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    Файл загружен успешно
+                  </div>
+                  <p class="mb-2 font-semibold text-white text-xl">
+                    {{ filename }}
+                  </p>
+                  <p class="mb-4 text-slate-300">
+                    {{ subtitles.length }} субтитров найдено
+                  </p>
+                  <button
+                    @click="goToWorkspace"
+                    class="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25 px-8 py-3 rounded-lg font-semibold text-white transition-all duration-300"
+                  >
+                    Начать анализ →
+                  </button>
+                </div>
+              </template>
+
+              <template v-else>
+                <!-- Обычное состояние загрузки -->
+                <div class="mb-6">
+                  <p class="mb-2 font-semibold text-white text-2xl">
+                    {{ isDragOver ? 'Отпустите файл здесь' : 'Перетащите файл сюда' }}
+                  </p>
+                  <p class="mb-4 text-slate-400 text-sm uppercase tracking-wider">
+                или
+              </p>
+
+                  <label class="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25 px-6 py-3 rounded-lg font-semibold text-white transition-all duration-300 cursor-pointer">
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      accept=".srt,.vtt,.txt"
+                      class="hidden"
+                      @change="handleFileInput"
+                    >
+                Выберите файл
+                  </label>
+
+                  <p class="mt-4 text-slate-500 text-sm">
+                    SRT • VTT • TXT • до 10MB
+                  </p>
+                </div>
+              </template>
+            </div>
+
+            <!-- Масштабируемая подложка поверх контента -->
+            <div
+              :class="[
+                'z-10 absolute inset-0 bg-slate-700/30 border-2 border-blue-400/50 border-dashed rounded-2xl origin-center transition-all duration-300',
+                // Hover эффекты (масштаб, фон, рамка)
+                'hover:bg-slate-700/50 hover:border-blue-400 hover:scale-105',
+                // Drag over эффекты (то же самое что и hover)
+                isDragOver ? 'bg-slate-700/50 border-blue-400 scale-105' : ''
+              ]"
+            >
+              <!-- Свечение при наведении ИЛИ drag over -->
+              <div
+                :class="[
+                  'absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl transition-opacity duration-300',
+                  isDragOver ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                ]"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ошибки -->
+        <div v-if="error" class="mb-8 text-center">
+          <div class="inline-flex items-center gap-2 bg-red-500/20 mb-2 px-4 py-2 rounded-full font-medium text-red-300 text-sm">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            Ошибка загрузки
+          </div>
+          <p class="mb-4 text-red-300">{{ error }}</p>
+          <button
+            v-if="uploadedFile"
+            @click="retry"
+            class="bg-red-500/20 hover:bg-red-500/30 px-4 py-2 border border-red-400/50 rounded-lg text-red-300 transition-all duration-300"
+          >
+            Попробовать снова
+          </button>
+          </div>
+      </div>
+    </main>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useFileUpload } from '../shared/composables/useFileUpload'
+
+// Используем composable для загрузки файлов
+const {
+  uploadState,
+  uploadedFile,
+  subtitles,
+  filename,
+  error,
+  isDragOver,
+  isUploading,
+  hasFile,
+  hasSubtitles,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  handleFileSelect,
+  reset,
+  retry,
+} = useFileUpload()
+
+// Ссылка на input для выбора файла
+const fileInput = ref<HTMLInputElement>()
+
+// Обработка выбора файла через input
+const handleFileInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    handleFileSelect(file)
+  }
+}
+
+// Переход к рабочему пространству
+const goToWorkspace = () => {
+  // TODO: Навигация к рабочему пространству
+  console.log('Переход к рабочему пространству с субтитрами:', subtitles.value)
+  alert(`Файл "${filename.value}" загружен! Субтитров: ${subtitles.value.length}. Готово к анализу!`)
+}
+</script>
+
+<style scoped>
+/* Кастомные стили для переливающегося эффекта заголовка */
+.glowing-text {
+  background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 4s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    background-position: 35% 50%;
+  }
+  50% {
+    background-position: 100% 5%;
+  }
+}
+
+/* Кастомный радиальный градиент для фона */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+</style>

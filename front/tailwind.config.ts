@@ -11,7 +11,11 @@ export default <Config>{
     './src/shared/**/*.{vue,js,ts,jsx,tsx}'
   ],
   theme: {
-    extend: {},
+    extend: {
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))',
+      },
+    },
   },
   plugins: [],
 }
