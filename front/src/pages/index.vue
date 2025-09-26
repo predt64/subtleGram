@@ -61,14 +61,18 @@
               <!-- Иконка -->
               <div class="mx-auto mb-6 w-16 h-16 text-blue-400">
                 <svg fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
+                  <path
+                    d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                  />
                 </svg>
               </div>
 
               <!-- Динамический контент в зависимости от состояния -->
               <template v-if="isUploading">
                 <div class="inline-flex items-center gap-2 mb-2 text-blue-300">
-                  <div class="border-2 border-t-transparent border-blue-400 rounded-full w-5 h-5 animate-spin"></div>
+                  <div
+                    class="border-2 border-t-transparent border-blue-400 rounded-full w-5 h-5 animate-spin"
+                  ></div>
                   <span class="font-medium text-sm"> Загружаем файл… </span>
                 </div>
                 <p class="text-slate-400 text-sm">
@@ -78,9 +82,19 @@
 
               <template v-else-if="hasSubtitles">
                 <div class="mb-6">
-                  <div class="inline-flex items-center gap-2 bg-green-500/20 mb-4 px-4 py-2 rounded-full font-medium text-green-300 text-sm">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 0116 0zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                  <div
+                    class="inline-flex items-center gap-2 bg-green-500/20 mb-4 px-4 py-2 rounded-full font-medium text-green-300 text-sm"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 0116 0zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"
+                      />
                     </svg>
                     Файл загружен успешно
                   </div>
@@ -90,12 +104,22 @@
                   <p class="mb-4 text-slate-300">
                     {{ subtitles.length }} субтитров найдено
                   </p>
-                  <button
-                    @click="goToWorkspace"
-                    class="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25 px-8 py-3 rounded-lg font-semibold text-white transition-all duration-300"
-                  >
-                    Начать анализ →
-                  </button>
+
+                  <div class="flex flex-col gap-3">
+                    <button
+                      @click="goToWorkspace"
+                      class="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25 px-6 py-3 rounded-lg font-semibold text-white transition-all"
+                    >
+                      Начать анализ →
+                    </button>
+
+                    <button
+                      @click="loadAnotherFile"
+                      class="bg-slate-700 hover:bg-slate-600 px-6 py-3 rounded-lg font-semibold text-slate-300 hover:text-white transition-all duration-75"
+                    >
+                      <p>Отменить загрузку</p>
+                    </button>
+                  </div>
                 </div>
               </template>
 
@@ -103,20 +127,28 @@
                 <!-- Обычное состояние загрузки -->
                 <div class="mb-6">
                   <p class="mb-2 font-semibold text-white text-2xl">
-                    {{ isDragOver ? 'Отпустите файл здесь' : 'Перетащите файл сюда' }}
+                    {{
+                      isDragOver
+                        ? "Отпустите файл здесь"
+                        : "Перетащите файл сюда"
+                    }}
                   </p>
-                  <p class="mb-4 text-slate-400 text-sm uppercase tracking-wider">
+                  <p
+                    class="mb-4 text-slate-400 text-sm uppercase tracking-wider"
+                  >
                 или
               </p>
 
-                  <label class="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25 px-6 py-3 rounded-lg font-semibold text-white transition-all duration-300 cursor-pointer">
+                  <label
+                    class="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25 px-6 py-3 rounded-lg font-semibold text-white transition-all cursor-pointer"
+                  >
                     <input
                       ref="fileInput"
                       type="file"
                       accept=".srt,.vtt,.txt"
                       class="hidden"
                       @change="handleFileInput"
-                    >
+                    />
                 Выберите файл
                   </label>
 
@@ -130,18 +162,15 @@
             <!-- Масштабируемая подложка поверх контента -->
             <div
               :class="[
-                'z-10 absolute inset-0 bg-slate-700/30 border-2 border-blue-400/50 border-dashed rounded-2xl origin-center transition-all duration-300',
-                // Hover эффекты (масштаб, фон, рамка)
-                'hover:bg-slate-700/50 hover:border-blue-400 hover:scale-105',
-                // Drag over эффекты (то же самое что и hover)
-                isDragOver ? 'bg-slate-700/50 border-blue-400 scale-105' : ''
+                'z-10 absolute inset-0 bg-slate-700/30 border-2 border-blue-400/50 border-dashed rounded-2xl origin-center transition-all duration-75',
+                isDragOver ? 'bg-slate-700/50 border-blue-400 scale-105' : '',
               ]"
             >
-              <!-- Свечение при наведении ИЛИ drag over -->
+              <!-- Свечение только при drag over (не при hover) -->
               <div
                 :class="[
-                  'absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl transition-opacity duration-300',
-                  isDragOver ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  'absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl transition-opacity duration-75',
+                  isDragOver ? 'opacity-100' : 'opacity-0',
                 ]"
               ></div>
             </div>
@@ -150,9 +179,15 @@
 
         <!-- Ошибки -->
         <div v-if="error" class="mb-8 text-center">
-          <div class="inline-flex items-center gap-2 bg-red-500/20 mb-2 px-4 py-2 rounded-full font-medium text-red-300 text-sm">
+          <div
+            class="inline-flex items-center gap-2 bg-red-500/20 mb-2 px-4 py-2 rounded-full font-medium text-red-300 text-sm"
+          >
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              />
             </svg>
             Ошибка загрузки
           </div>
@@ -160,19 +195,19 @@
           <button
             v-if="uploadedFile"
             @click="retry"
-            class="bg-red-500/20 hover:bg-red-500/30 px-4 py-2 border border-red-400/50 rounded-lg text-red-300 transition-all duration-300"
+            class="bg-red-500/20 hover:bg-red-500/30 px-4 py-2 border border-red-400/50 rounded-lg text-red-300 transition-all duration-75"
           >
             Попробовать снова
           </button>
-          </div>
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useFileUpload } from '../shared/composables/useFileUpload'
+import { ref } from "vue";
+import { useFileUpload } from "@/features/file-upload";
 
 // Используем composable для загрузки файлов
 const {
@@ -191,26 +226,41 @@ const {
   handleFileSelect,
   reset,
   retry,
-} = useFileUpload()
+} = useFileUpload();
 
 // Ссылка на input для выбора файла
-const fileInput = ref<HTMLInputElement>()
+const fileInput = ref<HTMLInputElement>();
 
 // Обработка выбора файла через input
 const handleFileInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
   if (file) {
-    handleFileSelect(file)
+    handleFileSelect(file);
   }
-}
+};
 
 // Переход к рабочему пространству
 const goToWorkspace = () => {
-  // TODO: Навигация к рабочему пространству
-  console.log('Переход к рабочему пространству с субтитрами:', subtitles.value)
-  alert(`Файл "${filename.value}" загружен! Субтитров: ${subtitles.value.length}. Готово к анализу!`)
-}
+  // Навигация к рабочему пространству
+  window.location.href = "/workspace";
+};
+
+// Загрузка другого файла
+const loadAnotherFile = () => {
+  // Очищаем localStorage и сбрасываем состояние
+  localStorage.removeItem("subtitles");
+  localStorage.removeItem("filename");
+  localStorage.removeItem("uploadState");
+
+  // Сбрасываем состояние composable
+  reset();
+
+  // Очищаем input файл
+  if (fileInput.value) {
+    fileInput.value.value = "";
+  }
+};
 </script>
 
 <style scoped>

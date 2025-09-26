@@ -1,0 +1,1 @@
+export { default as WorkspaceFooter } from './WorkspaceFooter.vue'

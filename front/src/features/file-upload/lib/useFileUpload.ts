@@ -1,6 +1,24 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
-import { subtitlesApi, apiUtils, type SubtitleFile, type ApiResponse, type UploadResponseData } from '../lib/api'
+import { subtitlesApi, apiUtils, type SubtitleFile, type ApiResponse, type UploadResponseData } from '@/entities/subtitle'
+
+/**
+ * Ключи для localStorage
+ */
+const STORAGE_KEYS = {
+  SUBTITLES: 'subtitles',
+  FILENAME: 'filename',
+  UPLOAD_STATE: 'uploadState'
+} as const
+
+/**
+ * Типы для сохраненных данных
+ */
+interface StoredData {
+  subtitles: SubtitleFile[]
+  filename: string
+  uploadState: UploadState
+}
 
 /**
  * Состояния загрузки
@@ -8,14 +26,73 @@ import { subtitlesApi, apiUtils, type SubtitleFile, type ApiResponse, type Uploa
 export type UploadState = 'idle' | 'uploading' | 'success' | 'error'
 
 /**
+ * Вспомогательные функции для localStorage
+ */
+const storage = {
+  get: <T>(key: string, defaultValue: T): T => {
+    try {
+      const item = localStorage.getItem(key)
+      return item ? JSON.parse(item) : defaultValue
+    } catch {
+      return defaultValue
+    }
+  },
+
+  set: <T>(key: string, value: T): void => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value))
+    } catch (error) {
+      console.warn('Не удалось сохранить в localStorage:', error)
+    }
+  },
+
+  remove: (key: string): void => {
+    try {
+      localStorage.removeItem(key)
+    } catch (error) {
+      console.warn('Не удалось удалить из localStorage:', error)
+    }
+  }
+}
+
+/**
+ * Загрузка сохраненных данных из localStorage
+ */
+const loadStoredData = (): Partial<StoredData> => {
+  return {
+    subtitles: storage.get(STORAGE_KEYS.SUBTITLES, []),
+    filename: storage.get(STORAGE_KEYS.FILENAME, ''),
+    uploadState: storage.get(STORAGE_KEYS.UPLOAD_STATE, 'idle')
+  }
+}
+
+/**
+ * Сохранение данных в localStorage
+ */
+const saveStoredData = (data: Partial<StoredData>): void => {
+  if (data.subtitles !== undefined) {
+    storage.set(STORAGE_KEYS.SUBTITLES, data.subtitles)
+  }
+  if (data.filename !== undefined) {
+    storage.set(STORAGE_KEYS.FILENAME, data.filename)
+  }
+  if (data.uploadState !== undefined) {
+    storage.set(STORAGE_KEYS.UPLOAD_STATE, data.uploadState)
+  }
+}
+
+/**
  * Composable для работы с загрузкой файлов субтитров
  */
 export function useFileUpload() {
+  // Загружаем сохраненные данные
+  const storedData = loadStoredData()
+
   // Реактивные состояния
-  const uploadState: Ref<UploadState> = ref('idle')
+  const uploadState: Ref<UploadState> = ref(storedData.uploadState || 'idle')
   const uploadedFile: Ref<File | null> = ref(null)
-  const subtitles: Ref<SubtitleFile[]> = ref([])
-  const filename: Ref<string> = ref('')
+  const subtitles: Ref<SubtitleFile[]> = ref(storedData.subtitles || [])
+  const filename: Ref<string> = ref(storedData.filename || '')
   const error: Ref<string | null> = ref(null)
   const isDragOver: Ref<boolean> = ref(false)
 
@@ -23,6 +100,21 @@ export function useFileUpload() {
   const isUploading = computed(() => uploadState.value === 'uploading')
   const hasFile = computed(() => uploadedFile.value !== null)
   const hasSubtitles = computed(() => subtitles.value.length > 0)
+
+  /**
+   * Настройка автоматического сохранения в localStorage
+   */
+  watch(subtitles, (newSubtitles) => {
+    saveStoredData({ subtitles: newSubtitles })
+  }, { deep: true })
+
+  watch(filename, (newFilename) => {
+    saveStoredData({ filename: newFilename })
+  })
+
+  watch(uploadState, (newState) => {
+    saveStoredData({ uploadState: newState })
+  })
 
   /**
    * Обработка события drag over
@@ -105,6 +197,13 @@ export function useFileUpload() {
       filename.value = result.data!.filename
       uploadState.value = 'success'
 
+      // Сохраняем в localStorage
+      saveStoredData({
+        subtitles: result.data!.subtitles,
+        filename: result.data!.filename,
+        uploadState: 'success'
+      })
+
       console.log(`Файл "${filename.value}" успешно загружен. Субтитров: ${subtitles.value.length}`)
 
     } catch (err) {
@@ -124,6 +223,11 @@ export function useFileUpload() {
     filename.value = ''
     error.value = null
     isDragOver.value = false
+
+    // Очищаем localStorage
+    storage.remove(STORAGE_KEYS.SUBTITLES)
+    storage.remove(STORAGE_KEYS.FILENAME)
+    storage.remove(STORAGE_KEYS.UPLOAD_STATE)
   }
 
   /**

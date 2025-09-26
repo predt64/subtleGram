@@ -10,9 +10,9 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss'
   ],
 
-  // Алиасы для структуры
+  // Алиасы для FSD структуры
   alias: {
-    "@": '../src'
+    "@": '../src',
   },
 
   // Указываем путь к страницам явно
