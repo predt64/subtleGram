@@ -1,5 +1,8 @@
 const API_BASE_URL = 'http://localhost:3001/api'
 
+import { useSubtitleStore } from '@/shared/stores/subtitle'
+import { useUploadStore } from '@/shared/stores/upload'
+
 export interface ApiResponse<T = any> {
   success?: boolean
   message: string
@@ -150,13 +153,12 @@ export const apiUtils = {
    * Очистка данных загрузки
    */
   clearUploadData(): void {
-    const keys = ['subtitles', 'filename', 'uploadState']
-    keys.forEach(key => {
-      try {
-        localStorage.removeItem(key)
-      } catch (error) {
-        console.warn(`Не удалось удалить ${key} из localStorage:`, error)
-      }
-    })
+    // VueUse автоматически управляет sessionStorage в stores,
+    // поэтому просто очищаем stores
+    const subtitleStore = useSubtitleStore()
+    const uploadStore = useUploadStore()
+
+    subtitleStore.clear()
+    uploadStore.reset()
   },
 }

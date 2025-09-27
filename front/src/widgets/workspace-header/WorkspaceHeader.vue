@@ -34,11 +34,21 @@
           v-model="searchQuery"
           type="text"
           placeholder="Поиск по субтитрам..."
-          class="bg-slate-700/50 px-4 py-2 pl-10 border border-slate-600/50 focus:border-blue-500 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-full text-white text-sm placeholder-slate-400"
+          class="bg-slate-700/50 px-4 py-2 pr-10 pl-10 border border-slate-600/50 focus:border-blue-500 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-full text-white text-sm placeholder-slate-400"
         >
         <svg class="top-1/2 left-3 absolute w-4 h-4 text-slate-400 -translate-y-1/2 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
+        <!-- Крестик для очистки -->
+        <button
+          v-if="searchQuery"
+          @click="clearSearch"
+          class="top-1/2 right-3 absolute flex justify-center items-center w-4 h-4 text-slate-400 hover:text-slate-300 transition-colors -translate-y-1/2 transform"
+        >
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 20 20">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -61,7 +71,7 @@
 
       <!-- Информация о файле -->
       <div class="text-right">
-        <p class="font-medium text-white text-sm">{{ filename || 'Файл не загружен' }}</p>
+        <p class="font-medium text-white text-sm">{{ subtitleStore.filename || 'Файл не загружен' }}</p>
         <p class="text-slate-400 text-xs">
           {{ subtitlesCount }} {{ subtitlesCount === 1 ? 'субтитр' : subtitlesCount < 5 ? 'субтитра' : 'субтитров' }}
         </p>
@@ -73,41 +83,52 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useFileUpload } from '@/features/file-upload'
+import { useSubtitleStore } from '@/shared/stores/subtitle'
+import { useUploadStore } from '@/shared/stores/upload'
+import { subtitlesApi } from '@/entities/subtitle'
 
 const emit = defineEmits<{
   'search': [query: string]
 }>()
 
-// Данные из composable
-const {
-  filename,
-  subtitles,
-  checkApiHealth
-} = useFileUpload()
+// Данные из stores
+const subtitleStore = useSubtitleStore()
+const uploadStore = useUploadStore()
 
 // Локальное состояние
 const searchQuery = ref('')
 const isApiAvailable = ref(false)
 
 // Вычисляемые свойства
-const subtitlesCount = computed(() => subtitles.value.length)
+const subtitlesCount = computed(() => subtitleStore.subtitles.length)
 
 // Методы
-const goBack = () => {
+const goBack = async () => {
   // Навигация назад к главной странице
-  window.history.back()
+  await navigateTo('/')
+}
+
+// Очистка поиска
+const clearSearch = () => {
+  searchQuery.value = ''
 }
 
 // Проверка доступности API при монтировании
 const checkApiStatus = async () => {
-  isApiAvailable.value = await checkApiHealth()
+  try {
+    await subtitlesApi.checkHealth()
+    isApiAvailable.value = true
+  } catch {
+    isApiAvailable.value = false
+  }
 }
 
 // Следим за изменениями в поиске
 watch(searchQuery, (newQuery) => {
   // Отправляем поисковый запрос в родительский компонент
   emit('search', newQuery)
+  // Сохраняем в store
+  subtitleStore.setSearchQuery(newQuery)
 })
 </script>
 

@@ -52,7 +52,6 @@ src/
 │   ├── config.ts              # Централизованная конфигурация
 │   └── tokenization.ts        # Разбиение текста на токены
 │   └── validation.ts          # Валидация данных
-│   └── sentenceUtils.ts        # @deprecated - больше не используется
 ├── types/               # TypeScript типы
 │   └── index.ts               # Все определения типов
 └── index.ts             # Точка входа Express сервера

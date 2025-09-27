@@ -84,7 +84,7 @@ const analysisRateLimit = rateLimit({
  * Возвращает: распарсенные субтитры в JSON формате
  * Ограничения: размер файла, тип файла (.srt, .vtt, .txt)
  */
-router.post('/upload', upload.single('subtitle'), uploadController.uploadSubtitle);
+router.post('/upload', upload.single('file'), uploadController.uploadSubtitle);
 
 /**
  * POST /api/subtitles/analyze

@@ -83,14 +83,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useFileUpload } from '@/features/file-upload'
+import { computed } from 'vue'
+import { useSubtitleStore } from '@/shared/stores/subtitle'
 
 // Props
 interface Props {
   modelValue?: number
-  filteredSubtitles?: any[]
-  searchQuery?: string
 }
 
 const props = defineProps<Props>()
@@ -98,27 +96,22 @@ const emit = defineEmits<{
   'update:modelValue': [index: number]
 }>()
 
-// Данные из composable
-const {
-  subtitles
-} = useFileUpload()
+// Данные из store
+const subtitleStore = useSubtitleStore()
 
 // Вычисляемые свойства (используем переданный через v-model индекс)
 const selectedSubtitleIndex = computed(() => props.modelValue || 0)
 
 // Определяем, какие субтитры использовать (отфильтрованные или все)
 const currentSubtitles = computed(() =>
-  props.searchQuery ? props.filteredSubtitles || [] : subtitles.value
+  subtitleStore.searchQuery ? subtitleStore.filteredSubtitles : subtitleStore.subtitles
 )
 
 // Находим индекс текущего субтитра в отфильтрованном массиве
 const filteredIndex = computed(() => {
-  if (!props.searchQuery || !props.filteredSubtitles) return selectedSubtitleIndex.value
+  if (!subtitleStore.searchQuery) return selectedSubtitleIndex.value
 
-  const currentSubtitle = subtitles.value[selectedSubtitleIndex.value]
-  if (!currentSubtitle) return 0
-
-  return props.filteredSubtitles.findIndex(s => s.id === currentSubtitle.id)
+  return subtitleStore.findFilteredIndex(subtitleStore.subtitles[selectedSubtitleIndex.value]?.id || 0)
 })
 
 // Текущий субтитр из отфильтрованного массива
@@ -138,31 +131,13 @@ const nextSubtitle = computed(() =>
 
 // Методы
 const goToPrevious = () => {
-  if (filteredIndex.value > 0) {
-    // Находим субтитр, который должен стать текущим
-    const newFilteredIndex = filteredIndex.value - 1
-    const targetSubtitle = currentSubtitles.value[newFilteredIndex]
-    if (targetSubtitle) {
-      const originalIndex = subtitles.value.findIndex(s => s.id === targetSubtitle.id)
-      if (originalIndex !== -1) {
-        emit('update:modelValue', originalIndex)
-      }
-    }
-  }
+  subtitleStore.goToPrevious()
+  emit('update:modelValue', subtitleStore.currentIndex)
 }
 
 const goToNext = () => {
-  if (filteredIndex.value < currentSubtitles.value.length - 1) {
-    // Находим субтитр, который должен стать текущим
-    const newFilteredIndex = filteredIndex.value + 1
-    const targetSubtitle = currentSubtitles.value[newFilteredIndex]
-    if (targetSubtitle) {
-      const originalIndex = subtitles.value.findIndex(s => s.id === targetSubtitle.id)
-      if (originalIndex !== -1) {
-        emit('update:modelValue', originalIndex)
-      }
-    }
-  }
+  subtitleStore.goToNext()
+  emit('update:modelValue', subtitleStore.currentIndex)
 }
 </script>
 

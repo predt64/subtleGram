@@ -241,19 +241,14 @@ const handleFileInput = (event: Event) => {
 };
 
 // Переход к рабочему пространству
-const goToWorkspace = () => {
-  // Навигация к рабочему пространству
-  window.location.href = "/workspace";
+const goToWorkspace = async () => {
+  // Правильная SPA навигация в Nuxt
+  await navigateTo('/workspace');
 };
 
 // Загрузка другого файла
 const loadAnotherFile = () => {
-  // Очищаем localStorage и сбрасываем состояние
-  localStorage.removeItem("subtitles");
-  localStorage.removeItem("filename");
-  localStorage.removeItem("uploadState");
-
-  // Сбрасываем состояние composable
+  // Очищаем состояние через composable (VueUse автоматически очистит sessionStorage)
   reset();
 
   // Очищаем input файл

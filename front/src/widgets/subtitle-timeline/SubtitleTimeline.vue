@@ -2,7 +2,7 @@
   <div class="p-4 subtitle-timeline">
     <h3 class="mb-4 font-semibold text-white text-lg">
       Субтитры
-      <span v-if="searchQuery" class="ml-2 font-normal text-slate-400 text-sm">
+      <span v-if="subtitleStore.searchQuery" class="ml-2 font-normal text-slate-400 text-sm">
         (найдено: {{ filteredSubtitles.length }})
       </span>
     </h3>
@@ -32,7 +32,7 @@
             'text-sm leading-relaxed',
             highlightedIndex === index ? 'text-blue-100' : 'text-slate-200'
           ]"
-          v-html="props.searchQuery ? highlightSearchTerms(subtitle.text, props.searchQuery) : subtitle.text"
+          v-html="subtitleStore.searchQuery ? highlightSearchTerms(subtitle.text, subtitleStore.searchQuery) : subtitle.text"
         ></div>
 
         <!-- Статус анализа -->
@@ -58,9 +58,9 @@
         </svg>
       </div>
       <p class="text-slate-400 text-sm">
-        {{ searchQuery ? 'Поиск не дал результатов' : 'Субтитры не загружены' }}
+        {{ subtitleStore.searchQuery ? 'Поиск не дал результатов' : 'Субтитры не загружены' }}
       </p>
-      <p v-if="searchQuery" class="mt-1 text-slate-500 text-xs">
+      <p v-if="subtitleStore.searchQuery" class="mt-1 text-slate-500 text-xs">
         Попробуйте другой поисковый запрос
       </p>
     </div>
@@ -69,13 +69,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useFileUpload } from '@/features/file-upload'
+import { useSubtitleStore } from '@/shared/stores/subtitle'
 
-// Данные из composable
-const {
-  subtitles,
-  error
-} = useFileUpload()
+// Данные из store
+const subtitleStore = useSubtitleStore()
 
 // Локальное состояние
 const timelineContainer = ref<HTMLElement>()
@@ -98,22 +95,16 @@ const selectedSubtitleIndex = computed(() => props.modelValue || 0)
 
 // Находим индекс текущего субтитра в отфильтрованном массиве для правильного выделения
 const highlightedIndex = computed(() => {
-  if (!props.searchQuery || !props.filteredSubtitles) {
+  if (!subtitleStore.searchQuery) {
     return selectedSubtitleIndex.value
   }
 
-  const currentSubtitle = subtitles.value[selectedSubtitleIndex.value]
-  if (!currentSubtitle) return 0
-
-  return props.filteredSubtitles.findIndex(s => s.id === currentSubtitle.id)
+  return subtitleStore.findFilteredIndex(subtitleStore.subtitles[selectedSubtitleIndex.value]?.id || 0)
 })
 
-// Вычисляемые свойства - используем переданные отфильтрованные субтитры
+// Вычисляемые свойства - используем данные из store
 const filteredSubtitles = computed(() => {
-  if (props.searchQuery && props.filteredSubtitles) {
-    return props.filteredSubtitles
-  }
-  return subtitles.value
+  return subtitleStore.filteredSubtitles
 })
 
 // Подсветка поисковых терминов
@@ -129,7 +120,7 @@ const selectSubtitle = (filteredIndex: number) => {
   // Находим соответствующий субтитр в оригинальном массиве
   const subtitle = filteredSubtitles.value[filteredIndex]
   if (subtitle) {
-    const originalIndex = subtitles.value.findIndex(s => s.id === subtitle.id)
+    const originalIndex = subtitleStore.subtitles.findIndex(s => s.id === subtitle.id)
     if (originalIndex !== -1) {
       emit('update:modelValue', originalIndex)
     }
@@ -154,23 +145,38 @@ const getSubtitleStatus = (index: number): 'analyzed' | 'new' => {
 const scrollToSubtitle = (index: number) => {
   if (!timelineContainer.value) return
 
-  // Находим элемент по индексу в отфильтрованном списке
-  if (index >= 0 && index < filteredSubtitles.value.length && subtitleRefs.value[index]) {
+  // Проверяем, что индекс валиден
+  if (index < 0 || index >= filteredSubtitles.value.length) return
+
+  // Ждем, пока элемент будет доступен
+  const tryScroll = () => {
     const element = subtitleRefs.value[index]
-    if (!element) return
+    if (!element || !element.offsetTop) {
+      // Элемент еще не готов, пробуем позже
+      setTimeout(tryScroll, 50)
+      return
+    }
 
     // Центрируем элемент в контейнере
     const container = timelineContainer.value
+    if (!container) return
+
     const elementTop = element.offsetTop
     const elementHeight = element.offsetHeight
     const containerHeight = container.offsetHeight
 
     const scrollTop = elementTop - containerHeight / 2 + elementHeight / 2
-    container.scrollTo({
-      top: scrollTop,
-      behavior: 'smooth'
-    })
+
+    // Проверяем, что позиция корректна
+    if (scrollTop >= 0 && scrollTop <= container.scrollHeight - containerHeight) {
+      container.scrollTo({
+        top: scrollTop,
+        behavior: 'smooth'
+      })
+    }
   }
+
+  tryScroll()
 }
 
 // Управление ссылками на элементы субтитров
@@ -180,7 +186,7 @@ const setSubtitleRef = (filteredIndex: number, el: any) => {
 
 // Клавиатурная навигация
 const handleKeydown = (event: KeyboardEvent) => {
-  if (!subtitles.value.length) return
+  if (!subtitleStore.subtitles.length) return
 
   const currentIndex = selectedSubtitleIndex.value
   let newIndex = currentIndex
@@ -192,7 +198,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       break
     case 'ArrowDown':
       event.preventDefault()
-      newIndex = Math.min(subtitles.value.length - 1, currentIndex + 1)
+      newIndex = Math.min(subtitleStore.subtitles.length - 1, currentIndex + 1)
       break
     case 'Enter':
     case ' ':
@@ -207,28 +213,24 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 // Следим за изменениями в поиске для автопрокрутки к первому результату
-watch(() => props.searchQuery, (newQuery) => {
-  if (newQuery && props.filteredSubtitles && props.filteredSubtitles.length > 0) {
+watch(() => subtitleStore.searchQuery, (newQuery) => {
+  if (newQuery && subtitleStore.filteredSubtitles.length > 0) {
     // Автопрокрутка к первому результату поиска
     setTimeout(() => scrollToSubtitle(0), 100)
   }
 })
 
 // Следим за изменениями в modelValue для автопрокрутки
-watch(() => props.modelValue, (newIndex) => {
-  if (newIndex !== undefined) {
-    // Автопрокрутка к выбранному элементу
+watch(() => props.modelValue, (newIndex, oldIndex) => {
+  if (newIndex !== undefined && newIndex !== oldIndex && newIndex >= 0) {
+    // Автопрокрутка к выбранному элементу только если индекс действительно изменился и корректен
     setTimeout(() => {
-      // Если есть поиск, находим индекс в отфильтрованном массиве
-      if (props.searchQuery && props.filteredSubtitles) {
-        const currentSubtitle = subtitles.value[newIndex]
-        if (currentSubtitle) {
-          const filteredIndex = props.filteredSubtitles.findIndex(s => s.id === currentSubtitle.id)
+      const subtitle = subtitleStore.subtitles[newIndex]
+      if (subtitle) {
+        const filteredIndex = subtitleStore.findFilteredIndex(subtitle.id)
+        if (filteredIndex >= 0 && filteredIndex < filteredSubtitles.value.length) {
           scrollToSubtitle(filteredIndex)
         }
-      } else {
-        // Если нет поиска, используем индекс напрямую
-        scrollToSubtitle(newIndex)
       }
     }, 100)
   }

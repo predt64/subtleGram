@@ -30,8 +30,6 @@
         <div class="flex flex-col bg-slate-800/50 border-slate-700/50 border-r w-80">
           <SubtitleTimeline
             v-model="selectedSubtitleIndex"
-            :search-query="searchQuery"
-            :filtered-subtitles="filteredSubtitles"
           />
         </div>
 
@@ -44,54 +42,46 @@
       <!-- Footer с навигацией -->
       <WorkspaceFooter
         v-model="selectedSubtitleIndex"
-        :filtered-subtitles="filteredSubtitles"
-        :search-query="searchQuery"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useFileUpload } from '@/features/file-upload'
+import { ref, computed, watch } from 'vue'
+import { useSubtitleStore } from '@/shared/stores/subtitle'
+import { useUploadStore } from '@/shared/stores/upload'
 import { WorkspaceHeader, SubtitleTimeline, AnalysisPanel, WorkspaceFooter } from '@/widgets'
 
-// Получаем данные из composable загрузки
-const {
-  subtitles,
-  filename,
-  hasSubtitles,
-  error,
-  uploadState
-} = useFileUpload()
+// Используем stores
+const subtitleStore = useSubtitleStore()
+const uploadStore = useUploadStore()
 
-// Локальное состояние для выбранного субтитра и поиска
-const selectedSubtitleIndex = ref<number>(0)
-const searchQuery = ref<string>('')
-const selectedSubtitle = computed(() =>
-  subtitles.value[selectedSubtitleIndex.value] || null
-)
-
-// Отфильтрованные субтитры для правильной работы поиска
-const filteredSubtitles = computed(() => {
-  if (!searchQuery.value) return subtitles.value
-
-  const query = searchQuery.value.toLowerCase()
-  return subtitles.value.filter(subtitle =>
-    subtitle.text.toLowerCase().includes(query)
-  )
-})
+// Используем currentIndex из store вместо локального состояния
+const selectedSubtitleIndex = ref<number>(subtitleStore.currentIndex)
 
 // Проверка - есть ли данные для отображения
-const hasData = computed(() => hasSubtitles.value && subtitles.value.length > 0)
+const hasData = computed(() => subtitleStore.hasSubtitles)
+
+// Синхронизируем локальное состояние с store
+watch(() => subtitleStore.currentIndex, (newIndex) => {
+  selectedSubtitleIndex.value = newIndex
+})
+
+// Синхронизируем store с локальным состоянием при изменении через v-model
+watch(selectedSubtitleIndex, (newIndex) => {
+  if (newIndex !== subtitleStore.currentIndex) {
+    subtitleStore.setCurrentIndex(newIndex)
+  }
+})
 
 // Методы
-const goToMainPage = () => {
-  window.location.href = '/'
+const goToMainPage = async () => {
+  await navigateTo('/')
 }
 
 const handleSearch = (query: string) => {
-  searchQuery.value = query
+  subtitleStore.setSearchQuery(query)
 }
 </script>
 

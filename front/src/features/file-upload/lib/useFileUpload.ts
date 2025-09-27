@@ -1,24 +1,9 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useSessionStorage } from '@vueuse/core'
 import type { Ref } from 'vue'
 import { subtitlesApi, apiUtils, type SubtitleFile, type ApiResponse, type UploadResponseData } from '@/entities/subtitle'
-
-/**
- * Ключи для localStorage
- */
-const STORAGE_KEYS = {
-  SUBTITLES: 'subtitles',
-  FILENAME: 'filename',
-  UPLOAD_STATE: 'uploadState'
-} as const
-
-/**
- * Типы для сохраненных данных
- */
-interface StoredData {
-  subtitles: SubtitleFile[]
-  filename: string
-  uploadState: UploadState
-}
+import { useSubtitleStore } from '@/shared/stores/subtitle'
+import { useUploadStore } from '@/shared/stores/upload'
 
 /**
  * Состояния загрузки
@@ -26,95 +11,26 @@ interface StoredData {
 export type UploadState = 'idle' | 'uploading' | 'success' | 'error'
 
 /**
- * Вспомогательные функции для localStorage
- */
-const storage = {
-  get: <T>(key: string, defaultValue: T): T => {
-    try {
-      const item = localStorage.getItem(key)
-      return item ? JSON.parse(item) : defaultValue
-    } catch {
-      return defaultValue
-    }
-  },
-
-  set: <T>(key: string, value: T): void => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value))
-    } catch (error) {
-      console.warn('Не удалось сохранить в localStorage:', error)
-    }
-  },
-
-  remove: (key: string): void => {
-    try {
-      localStorage.removeItem(key)
-    } catch (error) {
-      console.warn('Не удалось удалить из localStorage:', error)
-    }
-  }
-}
-
-/**
- * Загрузка сохраненных данных из localStorage
- */
-const loadStoredData = (): Partial<StoredData> => {
-  return {
-    subtitles: storage.get(STORAGE_KEYS.SUBTITLES, []),
-    filename: storage.get(STORAGE_KEYS.FILENAME, ''),
-    uploadState: storage.get(STORAGE_KEYS.UPLOAD_STATE, 'idle')
-  }
-}
-
-/**
- * Сохранение данных в localStorage
- */
-const saveStoredData = (data: Partial<StoredData>): void => {
-  if (data.subtitles !== undefined) {
-    storage.set(STORAGE_KEYS.SUBTITLES, data.subtitles)
-  }
-  if (data.filename !== undefined) {
-    storage.set(STORAGE_KEYS.FILENAME, data.filename)
-  }
-  if (data.uploadState !== undefined) {
-    storage.set(STORAGE_KEYS.UPLOAD_STATE, data.uploadState)
-  }
-}
-
-/**
  * Composable для работы с загрузкой файлов субтитров
  */
 export function useFileUpload() {
-  // Загружаем сохраненные данные
-  const storedData = loadStoredData()
+  // Используем Pinia stores
+  const subtitleStore = useSubtitleStore()
+  const uploadStore = useUploadStore()
 
-  // Реактивные состояния
-  const uploadState: Ref<UploadState> = ref(storedData.uploadState || 'idle')
-  const uploadedFile: Ref<File | null> = ref(null)
-  const subtitles: Ref<SubtitleFile[]> = ref(storedData.subtitles || [])
-  const filename: Ref<string> = ref(storedData.filename || '')
-  const error: Ref<string | null> = ref(null)
-  const isDragOver: Ref<boolean> = ref(false)
+  // Получаем данные из stores
+  const uploadState = computed(() => uploadStore.uploadState)
+  const uploadedFile = computed(() => uploadStore.uploadedFile)
+  const subtitles = computed(() => subtitleStore.subtitles)
+  const filename = computed(() => subtitleStore.filename)
+  const error = computed(() => uploadStore.error)
+  const isDragOver = computed(() => uploadStore.isDragOver)
 
   // Вычисляемые свойства
-  const isUploading = computed(() => uploadState.value === 'uploading')
-  const hasFile = computed(() => uploadedFile.value !== null)
-  const hasSubtitles = computed(() => subtitles.value.length > 0)
+  const isUploading = computed(() => uploadStore.isUploading)
+  const hasFile = computed(() => uploadStore.hasFile)
+  const hasSubtitles = computed(() => subtitleStore.hasSubtitles)
 
-  /**
-   * Настройка автоматического сохранения в localStorage
-   */
-  watch(subtitles, (newSubtitles) => {
-    saveStoredData({ subtitles: newSubtitles })
-  }, { deep: true })
-
-  watch(filename, (newFilename) => {
-    saveStoredData({ filename: newFilename })
-  })
-
-  watch(uploadState, (newState) => {
-    saveStoredData({ uploadState: newState })
-  })
 
   /**
    * Обработка события drag over
@@ -122,7 +38,7 @@ export function useFileUpload() {
   const handleDragOver = (event: DragEvent): void => {
     event.preventDefault()
     event.stopPropagation()
-    isDragOver.value = true
+    uploadStore.setDragOver(true)
   }
 
   /**
@@ -131,7 +47,7 @@ export function useFileUpload() {
   const handleDragLeave = (event: DragEvent): void => {
     event.preventDefault()
     event.stopPropagation()
-    isDragOver.value = false
+    uploadStore.setDragOver(false)
   }
 
   /**
@@ -140,7 +56,7 @@ export function useFileUpload() {
   const handleDrop = (event: DragEvent): void => {
     event.preventDefault()
     event.stopPropagation()
-    isDragOver.value = false
+    uploadStore.setDragOver(false)
 
     const files = event.dataTransfer?.files
     if (files && files.length > 0 && files[0]) {
@@ -154,12 +70,12 @@ export function useFileUpload() {
   const handleFileSelect = (file: File): void => {
     // Валидация файла
     if (!isValidSubtitleFile(file)) {
-      error.value = 'Пожалуйста, выберите файл субтитров (.srt, .vtt или .txt)'
+      uploadStore.setError('Пожалуйста, выберите файл субтитров (.srt, .vtt или .txt)')
       return
     }
 
-    uploadedFile.value = file
-    error.value = null
+    uploadStore.setUploadedFile(file)
+    uploadStore.setError(null)
     uploadFile()
   }
 
@@ -183,33 +99,24 @@ export function useFileUpload() {
    * Загрузка файла на сервер
    */
   const uploadFile = async (): Promise<void> => {
-    if (!uploadedFile.value) return
+    const file = uploadStore.uploadedFile
+    if (!file) return
 
-    uploadState.value = 'uploading'
-    error.value = null
+    uploadStore.setUploading()
 
     try {
       // Используем API клиент
-      const result = await subtitlesApi.uploadFile(uploadedFile.value)
+      const result = await subtitlesApi.uploadFile(file)
 
-      // Сохраняем данные
-      subtitles.value = result.data!.subtitles
-      filename.value = result.data!.filename
-      uploadState.value = 'success'
+      // Сохраняем данные в stores
+      subtitleStore.setSubtitles(result.data!.subtitles, result.data!.filename)
+      uploadStore.setSuccess()
 
-      // Сохраняем в localStorage
-      saveStoredData({
-        subtitles: result.data!.subtitles,
-        filename: result.data!.filename,
-        uploadState: 'success'
-      })
-
-      console.log(`Файл "${filename.value}" успешно загружен. Субтитров: ${subtitles.value.length}`)
+      console.log(`Файл "${subtitleStore.filename}" успешно загружен. Субтитров: ${subtitleStore.subtitles.length}`)
 
     } catch (err) {
       console.error('Ошибка загрузки:', err)
-      error.value = apiUtils.handleApiError(err, 'Произошла ошибка при загрузке файла')
-      uploadState.value = 'error'
+      uploadStore.setUploadError(apiUtils.handleApiError(err, 'Произошла ошибка при загрузке файла'))
     }
   }
 
@@ -217,17 +124,8 @@ export function useFileUpload() {
    * Сброс состояния
    */
   const reset = (): void => {
-    uploadState.value = 'idle'
-    uploadedFile.value = null
-    subtitles.value = []
-    filename.value = ''
-    error.value = null
-    isDragOver.value = false
-
-    // Очищаем localStorage
-    storage.remove(STORAGE_KEYS.SUBTITLES)
-    storage.remove(STORAGE_KEYS.FILENAME)
-    storage.remove(STORAGE_KEYS.UPLOAD_STATE)
+    uploadStore.reset()
+    subtitleStore.clear()
   }
 
   /**
@@ -237,11 +135,11 @@ export function useFileUpload() {
     sentenceText: string,
     context?: { prev: string; next: string }
   ): Promise<ApiResponse<any> | null> => {
-    if (!hasSubtitles.value) return null
+    if (!subtitleStore.hasSubtitles) return null
 
     try {
       const result = await subtitlesApi.analyzeSubtitles(
-        subtitles.value,
+        subtitleStore.subtitles,
         sentenceText,
         context
       )
@@ -250,7 +148,7 @@ export function useFileUpload() {
     } catch (err) {
       console.error('Ошибка анализа:', err)
       const errorMessage: string = err instanceof Error ? err.message : 'Произошла ошибка при анализе'
-      error.value = errorMessage
+      uploadStore.setError(errorMessage)
       return null
     }
   }
@@ -271,7 +169,10 @@ export function useFileUpload() {
    * Повторная загрузка
    */
   const retry = (): void => {
-    if (uploadedFile.value) {
+    const file = uploadStore.uploadedFile
+    if (file) {
+      uploadStore.setUploadedFile(file)
+      uploadStore.setError(null)
       uploadFile()
     }
   }
@@ -298,5 +199,8 @@ export function useFileUpload() {
     checkApiHealth,
     reset,
     retry,
+    // Доступ к stores для других компонентов
+    subtitleStore,
+    uploadStore,
   }
 }

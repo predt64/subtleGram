@@ -1,33 +1,35 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from 'url'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
-  // Модули для работы с Pinia, Tailwind и persisted state
   modules: [
     '@pinia/nuxt',
-    'pinia-plugin-persistedstate',
     '@nuxtjs/tailwindcss'
   ],
 
-  // Алиасы для FSD структуры
+  vite: {
+    plugins: []
+  },
+
+  pinia: {
+    storesDirs: ['@/shared/stores/**']
+  },
+
+  // Nuxt 4.1.2 формат алиасов
   alias: {
-    "@": '../src',
+    "@": fileURLToPath(new URL('./src', import.meta.url))
   },
 
-  // Указываем путь к страницам явно
   dir: {
-    pages: './src/pages'
+    pages: '@/pages'
   },
 
-  // Настройки TypeScript
   typescript: {
     strict: true,
   },
 
-  // Настройки CSS и Tailwind
-  css: ['~/assets/css/main.css'],
+  css: ['@/app/styles/main.css'],
 
-  // Настройки для SSR
-  ssr: true,
 })

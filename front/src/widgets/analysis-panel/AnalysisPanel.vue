@@ -165,7 +165,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { useFileUpload } from "@/features/file-upload"
+import { useSubtitleStore } from "@/shared/stores/subtitle"
 
 // Props
 interface Props {
@@ -177,12 +177,12 @@ const emit = defineEmits<{
   "update:modelValue": [index: number];
 }>();
 
-// Данные из composable
-const { subtitles, error } = useFileUpload();
+// Данные из store
+const subtitleStore = useSubtitleStore();
 
 // Вычисляемые свойства
 const selectedSubtitle = computed(() =>
-  props.modelValue !== undefined ? subtitles.value[props.modelValue] : null
+  props.modelValue !== undefined ? subtitleStore.subtitles[props.modelValue] : null
 );
 
 // Методы
@@ -199,7 +199,7 @@ watch(
   () => props.modelValue,
   (newIndex) => {
     if (newIndex !== undefined) {
-      console.log("Анализ субтитра:", subtitles.value[newIndex]);
+      console.log("Анализ субтитра:", subtitleStore.subtitles[newIndex]);
       // TODO: Запустить анализ выбранного субтитра
     }
   }

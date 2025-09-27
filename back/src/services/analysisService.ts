@@ -20,7 +20,7 @@ export class AnalysisService {
    * Строит контекст предложения
    */
   private buildSentenceContext(sentenceText: string, context?: { prev: string; next: string }): { text: string; prev: string; next: string } {
-    return {
+      return {
       text: sentenceText,
       prev: context?.prev || '',
       next: context?.next || ''
@@ -31,13 +31,13 @@ export class AnalysisService {
    * Анализирует предложение
    */
   async analyzeSentence(context: { text: string; prev: string; next: string }): Promise<any> {
-    const messages: QwenMessage[] = [
+      const messages: QwenMessage[] = [
       { role: 'system', content: getQwenService().generateSystemPrompt('translation') },
       { role: 'user', content: `Анализируй предложение: "${context.text}". Контекст: предыдущее: "${context.prev}", следующее: "${context.next}". Будь лаконичен. Ответь на русском языке. Обязательно выдели сленг в JSON: {"slang": ["word1"]}.` }
     ];
     const config = getAnalysisConfig('translation');
     const response = await getQwenService().chatCompletionWithMarkers(messages, config);
-    const content = response.choices[0]?.message?.content || '';
+      const content = response.choices[0]?.message?.content || '';
     return getQwenService().parseStructuredResponse(content);
   }
 
