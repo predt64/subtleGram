@@ -10,6 +10,7 @@
 ## 🚀 Стек технологий
 
 ### Frontend
+
 - **Nuxt 4** - Vue.js фреймворк с SSR/SSG
 - **Vue 3** - Прогрессивный JavaScript фреймворк
 - **TypeScript** - Типизированный JavaScript
@@ -17,12 +18,14 @@
 - **Pinia** - Современное управление состоянием для Vue
 
 ### Backend
+
 - **Node.js** - JavaScript runtime
 - **Express.js** - Web фреймворк
 - **TypeScript** - Типизированный JavaScript
 - **Multer** - Загрузка файлов
 
 ### Архитектура
+
 - **Feature-Sliced Design (FSD)** - Архитектурная методология
 - **Монолитный frontend** - Vue.js приложение
 - **Pinia stores** - Централизованное управление состоянием
@@ -33,39 +36,31 @@
 
 ```
 subtleGram/
-├── front/                 # Nuxt приложение
+├── front/
 │   ├── src/
-│   │   ├── app/          # Приложение (layouts, providers, styles)
-│   │   ├── entities/     # FSD: бизнес-сущности
-│   │   ├── features/     # FSD: функциональности
-│   │   ├── shared/       # FSD: переиспользуемый код
-│   │   └── pages/        # Страницы приложения
-│   ├── nuxt.config.ts    # Конфигурация Nuxt
-│   ├── tailwind.config.ts # Конфигурация Tailwind
-│   └── package.json      # Зависимости frontend
-└── back/                 # Backend API
+│   │   ├── app/
+│   │   ├── entities/
+│   │   ├── features/
+│   │   ├── shared/
+│   │   ├── widgets/
+│   │   └── pages/
+│   ├── nuxt.config.ts
+│   ├── tailwind.config.ts
+│   └── package.json
+└── back/
     ├── src/
-    │   ├── controllers/ # API контроллеры
-    │   ├── routes/      # API маршруты
-    │   ├── services/    # Бизнес логика
-    │   ├── types/       # TypeScript типы
-    │   └── utils/       # Утилиты
-    └── package.json     # Backend зависимости
+    │   ├── controllers/
+    │   ├── routes/
+    │   ├── services/
+    │   ├── types/
+    │   └── utils/
+    └── package.json
 ```
-
-## ✨ Основные возможности
-
-- 📄 Загрузка SRT файлов - Поддержка стандартных субтитров
-- 🎯 Интерактивный анализ - Кликабельные фразы и предложения
-- 🤖 Детальный анализ - Грамматика, переводы и стилевые варианты
-- 🔍 Поиск по субтитрам - Быстрый поиск с подсветкой
-- 📱 Responsive дизайн - Работает на всех устройствах
-- ⚡ Оптимизации - FOUC fixes, drag&drop, плавная прокрутка
-- 🎨 Современный UI - Tailwind CSS с темной темой
 
 ## 🛠 Установка и запуск
 
 ### Frontend
+
 ```bash
 cd front
 npm install
@@ -75,6 +70,7 @@ npm run dev
 Приложение будет доступно на http://localhost:3000
 
 ### Backend
+
 ```bash
 cd back
 npm install
@@ -84,6 +80,7 @@ npm run dev
 API сервер будет доступен на http://localhost:3001
 
 ### Сборка для продакшена
+
 ```bash
 # Frontend
 cd front
