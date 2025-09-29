@@ -27,60 +27,43 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  // Создаем копию ошибки для модификации
-  let error = { ...err };
-  error.message = err.message;
-
-  // Логируем ошибку
   console.error('Ошибка сервера:', err);
 
-  // Обработка специфических ошибок базы данных (Mongoose)
-  if (err.name === 'CastError') {
-    const message = 'Ресурс не найден';
-    error = new AppError(message, 404);
-  }
-
-  // Дублирование ключа в MongoDB
-  if (err.name === 'MongoError' && (err as any).code === 11000) {
-    const message = 'Дублирование значения поля';
-    error = new AppError(message, 400);
-  }
-
-  // Ошибка валидации Mongoose
-  if (err.name === 'ValidationError') {
-    const message = 'Ошибка валидации данных';
-    error = new AppError(message, 400);
-  }
-
-  // Ошибки JWT токенов
-  if (err.name === 'JsonWebTokenError') {
-    const message = 'Неверный токен';
-    error = new AppError(message, 401);
-  }
-
-  if (err.name === 'TokenExpiredError') {
-    const message = 'Токен истек';
-    error = new AppError(message, 401);
-  }
-
-  // Ошибки загрузки файлов (Multer)
+  // Обрабатываем Multer ошибки загрузки файлов
   if (err.name === 'MulterError') {
     if (err.message.includes('File too large')) {
-      error = new AppError('Файл слишком большой', 400);
-    } else {
-      error = new AppError('Ошибка загрузки файла', 400);
+      res.status(400).json({
+        success: false,
+        error: 'Файл слишком большой'
+      });
+      return;
     }
+    res.status(400).json({
+      success: false,
+      error: 'Ошибка загрузки файла'
+    });
+    return;
   }
 
-  // Отправляем ответ с ошибкой
-  res.status((error as AppError).statusCode || 500).json({
+  // Обрабатка кастомных ошибок
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      success: false,
+      error: err.message,
+      ...(getAppConfig().nodeEnv === 'development' && {
+        stack: err.stack
+      })
+    });
+    return;
+  }
+
+  // Обрабатываем остальные ошибки
+  res.status(500).json({
     success: false,
-    error: error.message || 'Ошибка сервера',
-    // В режиме разработки добавляем стек и детали для отладки
+    error: err.message || 'Внутренняя ошибка сервера',
     ...(getAppConfig().nodeEnv === 'development' && {
-      stack: err.stack,
-      details: err
-    }),
+      stack: err.stack
+    })
   });
 };
 
@@ -159,9 +142,6 @@ export const sendResponse = (
 // Ссылка на сервер для корректного завершения работы
 let server: any;
 
-/**
- * Устанавливаем ссылку на сервер для graceful shutdown
- */
 export const setServer = (serverInstance: any): void => {
   server = serverInstance;
 };

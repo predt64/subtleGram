@@ -2,20 +2,11 @@ import { fileURLToPath } from 'url'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
 
   modules: [
     '@pinia/nuxt',
     '@nuxtjs/tailwindcss'
   ],
-
-  vite: {
-    plugins: []
-  },
-
-  pinia: {
-    storesDirs: ['@/shared/stores/**']
-  },
 
   // Nuxt 4.1.2 формат алиасов
   alias: {
@@ -32,4 +23,37 @@ export default defineNuxtConfig({
 
   css: ['@/app/styles/main.css'],
 
+  ssr: true,
+
+  // Ниже попытка пофиксить/уменьшить FOUC
+
+  vite: {
+    css: {
+      devSourcemap: true
+    }
+  },
+
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: 'ru'
+      },
+      link: [
+        { rel: 'preload', as: 'style', href: '/_nuxt/entry.css' },
+      ]
+    }
+  },
+
+  experimental: {
+    payloadExtraction: false,
+  },
+
+  nitro: {
+    compressPublicAssets: true,
+    minify: true,
+  },
+
+  tailwindcss: {
+    configPath: '~/tailwind.config.ts'
+  }
 })

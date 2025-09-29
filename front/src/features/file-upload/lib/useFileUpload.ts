@@ -1,7 +1,5 @@
-import { ref, computed, watch, onMounted } from 'vue'
-import { useSessionStorage } from '@vueuse/core'
-import type { Ref } from 'vue'
-import { subtitlesApi, apiUtils, type SubtitleFile, type ApiResponse, type UploadResponseData } from '@/entities/subtitle'
+import { computed } from 'vue'
+import { subtitlesApi, apiUtils } from '@/shared/api'
 import { useSubtitleStore } from '@/shared/stores/subtitle'
 import { useUploadStore } from '@/shared/stores/upload'
 
@@ -12,13 +10,18 @@ export type UploadState = 'idle' | 'uploading' | 'success' | 'error'
 
 /**
  * Composable для работы с загрузкой файлов субтитров
+ * Предоставляет реактивное состояние и методы для управления процессом загрузки
+ * @returns Объект с состоянием, геттерами и методами для работы с файлами
  */
 export function useFileUpload() {
-  // Используем Pinia stores
+  // Используем сторы
   const subtitleStore = useSubtitleStore()
   const uploadStore = useUploadStore()
 
-  // Получаем данные из stores
+  // Счетчик для правильной работы drag-n-drop (избегает event bubbling)
+  let dragCounter = 0
+
+  // Получаем данные из сторов
   const uploadState = computed(() => uploadStore.uploadState)
   const uploadedFile = computed(() => uploadStore.uploadedFile)
   const subtitles = computed(() => subtitleStore.subtitles)
@@ -33,29 +36,51 @@ export function useFileUpload() {
 
 
   /**
-   * Обработка события drag over
+   * Обработка события dragenter для зоны загрузки
+   * Использует счетчик для правильной работы с дочерними элементами
+   * @param event - событие DragEvent
+   */
+  const handleDragEnter = (event: DragEvent): void => {
+    event.preventDefault()
+    event.stopPropagation()
+    dragCounter++
+    if (dragCounter === 1) {
+      uploadStore.setDragOver(true)
+    }
+  }
+
+  /**
+   * Обработка события dragover для зоны загрузки
+   * Необходим для корректной работы drop события
+   * @param event - событие DragEvent
    */
   const handleDragOver = (event: DragEvent): void => {
     event.preventDefault()
     event.stopPropagation()
-    uploadStore.setDragOver(true)
+    // dragover нужен для разрешения drop
   }
 
   /**
-   * Обработка события drag leave
+   * Обработка события dragleave для зоны загрузки
+   * Использует счетчик для правильной работы с дочерними элементами
+   * @param event - событие DragEvent
    */
   const handleDragLeave = (event: DragEvent): void => {
     event.preventDefault()
     event.stopPropagation()
-    uploadStore.setDragOver(false)
+    dragCounter--
+    if (dragCounter === 0) {
+      uploadStore.setDragOver(false)
+    }
   }
 
   /**
-   * Обработка события drop
+   * Обработка события drop - пользователь бросил файл в зону загрузки
+   * @param event - событие DragEvent с файлами
    */
   const handleDrop = (event: DragEvent): void => {
     event.preventDefault()
-    event.stopPropagation()
+    dragCounter = 0
     uploadStore.setDragOver(false)
 
     const files = event.dataTransfer?.files
@@ -65,10 +90,11 @@ export function useFileUpload() {
   }
 
   /**
-   * Обработка выбора файла через input
+   * Обработка выбора файла пользователем (через input или drag&drop)
+   * Выполняет валидацию и начинает загрузку
+   * @param file - выбранный файл
    */
   const handleFileSelect = (file: File): void => {
-    // Валидация файла
     if (!isValidSubtitleFile(file)) {
       uploadStore.setError('Пожалуйста, выберите файл субтитров (.srt, .vtt или .txt)')
       return
@@ -80,7 +106,9 @@ export function useFileUpload() {
   }
 
   /**
-   * Валидация файла субтитров
+   * Проверяет, является ли файл допустимым для загрузки субтитров
+   * @param file - файл для проверки
+   * @returns true если файл валиден
    */
   const isValidSubtitleFile = (file: File | null): boolean => {
     if (!file) return false
@@ -96,7 +124,7 @@ export function useFileUpload() {
   }
 
   /**
-   * Загрузка файла на сервер
+   * Загружает файл субтитров на сервер и обрабатывает результат
    */
   const uploadFile = async (): Promise<void> => {
     const file = uploadStore.uploadedFile
@@ -105,10 +133,9 @@ export function useFileUpload() {
     uploadStore.setUploading()
 
     try {
-      // Используем API клиент
       const result = await subtitlesApi.uploadFile(file)
 
-      // Сохраняем данные в stores
+      // Сохраняем загруженные субтитры в store
       subtitleStore.setSubtitles(result.data!.subtitles, result.data!.filename)
       uploadStore.setSuccess()
 
@@ -121,52 +148,18 @@ export function useFileUpload() {
   }
 
   /**
-   * Сброс состояния
+   * Сбрасывает все состояние загрузки к начальному
+   * Очищает файлы, ошибки, субтитры и drag-n-drop счетчик
    */
   const reset = (): void => {
     uploadStore.reset()
     subtitleStore.clear()
+    dragCounter = 0 // Сбрасываем счетчик drag-n-drop
   }
 
   /**
-   * Анализ конкретного предложения
-   */
-  const analyzeSentence = async (
-    sentenceText: string,
-    context?: { prev: string; next: string }
-  ): Promise<ApiResponse<any> | null> => {
-    if (!subtitleStore.hasSubtitles) return null
-
-    try {
-      const result = await subtitlesApi.analyzeSubtitles(
-        subtitleStore.subtitles,
-        sentenceText,
-        context
-      )
-
-      return result
-    } catch (err) {
-      console.error('Ошибка анализа:', err)
-      const errorMessage: string = err instanceof Error ? err.message : 'Произошла ошибка при анализе'
-      uploadStore.setError(errorMessage)
-      return null
-    }
-  }
-
-  /**
-   * Проверка доступности API
-   */
-  const checkApiHealth = async (): Promise<boolean> => {
-    try {
-      await subtitlesApi.checkMainHealth()
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  /**
-   * Повторная загрузка
+   * Повторяет загрузку файла при ошибке
+   * Использует ранее выбранный файл без необходимости выбора заново
    */
   const retry = (): void => {
     const file = uploadStore.uploadedFile
@@ -177,6 +170,9 @@ export function useFileUpload() {
     }
   }
 
+  /**
+   * Экспортируемые свойства и методы composable
+   */
   return {
     // Состояния
     uploadState,
@@ -190,13 +186,11 @@ export function useFileUpload() {
     hasSubtitles,
 
     // Методы
+    handleDragEnter,
     handleDragOver,
     handleDragLeave,
     handleDrop,
     handleFileSelect,
-    uploadFile,
-    analyzeSentence,
-    checkApiHealth,
     reset,
     retry,
     // Доступ к stores для других компонентов

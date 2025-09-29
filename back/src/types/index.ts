@@ -265,26 +265,6 @@ export type DeepPartial<T> = {
 };
 
 /**
- * Типы для Translation Guide (новая функциональность)
- */
-
-/**
- * Токен - базовая единица текста для индексации
- * Содержит информацию о позиции слова в субтитрах
- *
- * @deprecated - поле norm удалено после упрощения API
- * Ранее использовалось для нормализации сокращений (I'm → I am)
- * при автоматическом определении предложения по позиции клика
- */
-export interface Token {
-  id: number;              // Глобальный уникальный ID токена
-  entryIndex: number;      // Индекс субтитра, к которому относится токен
-  charStart: number;       // Начальная позиция в символах
-  charEnd: number;         // Конечная позиция в символах
-  text: string;            // Текст токена
-}
-
-/**
  * Сегмент перевода - логический фрагмент для перевода
  */
 export interface TranslationSegment {
@@ -328,7 +308,6 @@ export interface SlangCard {
  * Полный гид перевода для клика
  */
 export interface TranslationGuide {
-  tokens: Token[];               // Все токены в контексте
   segments: TranslationSegment[]; // Сегменты для перевода
   translations: {                // Переводы по сегментам
     segmentId: string;

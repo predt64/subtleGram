@@ -52,6 +52,7 @@
           <!-- Drag & Drop зона -->
           <div
             class="group relative"
+            @dragenter.prevent="handleDragEnter"
             @dragover.prevent="handleDragOver"
             @dragleave.prevent="handleDragLeave"
             @drop.prevent="handleDrop"
@@ -127,17 +128,13 @@
                 <!-- Обычное состояние загрузки -->
                 <div class="mb-6">
                   <p class="mb-2 font-semibold text-white text-2xl">
-                    {{
-                      isDragOver
-                        ? "Отпустите файл здесь"
-                        : "Перетащите файл сюда"
-                    }}
+                    {{ dropZoneText }}
                   </p>
                   <p
                     class="mb-4 text-slate-400 text-sm uppercase tracking-wider"
                   >
-                или
-              </p>
+                    или
+                  </p>
 
                   <label
                     class="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25 px-6 py-3 rounded-lg font-semibold text-white transition-all cursor-pointer"
@@ -149,7 +146,7 @@
                       class="hidden"
                       @change="handleFileInput"
                     />
-                Выберите файл
+                    Выберите файл
                   </label>
 
                   <p class="mt-4 text-slate-500 text-sm">
@@ -206,20 +203,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useFileUpload } from "@/features/file-upload";
 
-// Используем composable для загрузки файлов
 const {
-  uploadState,
   uploadedFile,
   subtitles,
   filename,
   error,
   isDragOver,
   isUploading,
-  hasFile,
   hasSubtitles,
+  handleDragEnter,
   handleDragOver,
   handleDragLeave,
   handleDrop,
@@ -228,10 +223,8 @@ const {
   retry,
 } = useFileUpload();
 
-// Ссылка на input для выбора файла
 const fileInput = ref<HTMLInputElement>();
 
-// Обработка выбора файла через input
 const handleFileInput = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
@@ -240,26 +233,25 @@ const handleFileInput = (event: Event) => {
   }
 };
 
-// Переход к рабочему пространству
 const goToWorkspace = async () => {
-  // Правильная SPA навигация в Nuxt
-  await navigateTo('/workspace');
+  await navigateTo("/workspace");
 };
 
-// Загрузка другого файла
 const loadAnotherFile = () => {
-  // Очищаем состояние через composable (VueUse автоматически очистит sessionStorage)
   reset();
 
-  // Очищаем input файл
   if (fileInput.value) {
     fileInput.value.value = "";
   }
 };
+
+const dropZoneText = computed(() =>
+  isDragOver.value ? "Отпустите файл здесь" : "Перетащите файл сюда"
+);
 </script>
 
 <style scoped>
-/* Кастомные стили для переливающегося эффекта заголовка */
+/*стили для переливающегося эффекта заголовка */
 .glowing-text {
   background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
   background-size: 300% 300%;
@@ -279,7 +271,6 @@ const loadAnotherFile = () => {
   }
 }
 
-/* Кастомный радиальный градиент для фона */
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--tw-gradient-stops));
 }

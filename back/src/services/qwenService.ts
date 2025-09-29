@@ -94,7 +94,7 @@ export class QwenService {
     // Цикл повторных попыток при ошибках
     for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
       try {
-        console.log(`🤖 Qwen API call attempt ${attempt}/${config.maxRetries}`);
+        console.log(`Qwen API call attempt ${attempt}/${config.maxRetries}`);
 
         // Выполняем HTTP запрос к API
         const response = await this.makeAPIRequest(messages, config);

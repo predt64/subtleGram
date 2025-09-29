@@ -77,11 +77,6 @@ export const analyzeController = {
         return;
       }
 
-      // Логируем начало анализа
-      console.log(`Начинаем анализ Qwen для ${subtitles.length} субтитров`);
-      console.log(`Текст предложения: "${sentenceText}"`);
-      console.log(`Контекст: prev="${context?.prev || ''}", next="${context?.next || ''}"`);
-
       // Логируем предупреждения валидации, если они есть
       if (validation.warnings.length > 0) {
         console.warn('Предупреждения валидации:', validation.warnings);
@@ -91,7 +86,7 @@ export const analyzeController = {
        * ВЫПОЛНЕНИЕ АНАЛИЗА
        * Вызываем сервис анализа с использованием Qwen AI
        */
-      const analysisResult = await analysisService.createTranslationGuide(subtitles, {
+      const analysisResult = await analysisService.createTranslationGuide({
         sentenceText,
         context
       });

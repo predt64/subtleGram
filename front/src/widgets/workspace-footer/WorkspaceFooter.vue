@@ -1,5 +1,7 @@
 <template>
-  <footer class="flex justify-between items-center bg-slate-800/80 backdrop-blur-sm px-6 border-slate-700/50 border-t h-16 workspace-footer">
+  <footer
+    class="flex justify-between items-center bg-slate-800/80 backdrop-blur-sm px-6 border-slate-700/50 border-t h-16 workspace-footer"
+  >
     <!-- Левая часть - Контекст -->
     <div class="flex items-center gap-6">
       <!-- Предыдущая строка -->
@@ -41,16 +43,24 @@
       <!-- Предыдущая -->
       <button
         @click="goToPrevious"
-        :disabled="filteredIndex <= 0"
+        :disabled="previousButtonState.disabled"
         :class="[
           'flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200',
-          filteredIndex <= 0
-            ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
-            : 'bg-slate-700/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+          previousButtonState.classes,
         ]"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          />
         </svg>
         <span class="font-medium text-sm">Назад</span>
       </button>
@@ -58,24 +68,32 @@
       <!-- Индикатор позиции -->
       <div class="flex items-center gap-2 px-3">
         <span class="text-slate-400 text-sm">
-          {{ filteredIndex + 1 }} из {{ currentSubtitles.length }}
+          {{ positionInfo.current }} из {{ positionInfo.total }}
         </span>
       </div>
 
       <!-- Следующая -->
       <button
         @click="goToNext"
-        :disabled="filteredIndex >= currentSubtitles.length - 1"
+        :disabled="nextButtonState.disabled"
         :class="[
           'flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200',
-          filteredIndex >= currentSubtitles.length - 1
-            ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
-            : 'bg-slate-700/80 text-slate-300 hover:bg-slate-700 hover:text-white'
+          nextButtonState.classes,
         ]"
       >
         <span class="font-medium text-sm">Вперед</span>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 5l7 7-7 7"
+          />
         </svg>
       </button>
     </div>
@@ -83,62 +101,117 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useSubtitleStore } from '@/shared/stores/subtitle'
+import { computed } from "vue";
+import { useSubtitleStore } from "@/shared/stores/subtitle";
 
-// Props
 interface Props {
-  modelValue?: number
+  modelValue?: number;
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 const emit = defineEmits<{
-  'update:modelValue': [index: number]
-}>()
+  "update:modelValue": [index: number];
+}>();
 
-// Данные из store
-const subtitleStore = useSubtitleStore()
+const subtitleStore = useSubtitleStore();
 
-// Вычисляемые свойства (используем переданный через v-model индекс)
-const selectedSubtitleIndex = computed(() => props.modelValue || 0)
+const selectedSubtitleIndex = computed(() => props.modelValue || 0);
 
-// Определяем, какие субтитры использовать (отфильтрованные или все)
 const currentSubtitles = computed(() =>
-  subtitleStore.searchQuery ? subtitleStore.filteredSubtitles : subtitleStore.subtitles
-)
+  subtitleStore.searchQuery
+    ? subtitleStore.filteredSubtitles
+    : subtitleStore.subtitles
+);
 
-// Находим индекс текущего субтитра в отфильтрованном массиве
 const filteredIndex = computed(() => {
-  if (!subtitleStore.searchQuery) return selectedSubtitleIndex.value
+  if (!subtitleStore.searchQuery) return selectedSubtitleIndex.value;
 
-  return subtitleStore.findFilteredIndex(subtitleStore.subtitles[selectedSubtitleIndex.value]?.id || 0)
-})
+  return subtitleStore.findFilteredIndex(
+    subtitleStore.subtitles[selectedSubtitleIndex.value]?.id || 0
+  );
+});
 
-// Текущий субтитр из отфильтрованного массива
-const selectedSubtitle = computed(() =>
-  currentSubtitles.value[filteredIndex.value] || null
-)
+const selectedSubtitle = computed(
+  () => currentSubtitles.value[filteredIndex.value] || null
+);
 
 const previousSubtitle = computed(() =>
-  filteredIndex.value > 0 ? currentSubtitles.value[filteredIndex.value - 1] : null
-)
+  filteredIndex.value > 0
+    ? currentSubtitles.value[filteredIndex.value - 1]
+    : null
+);
 
 const nextSubtitle = computed(() =>
   filteredIndex.value < currentSubtitles.value.length - 1
     ? currentSubtitles.value[filteredIndex.value + 1]
     : null
-)
+);
 
-// Методы
+/**
+ * Состояние кнопки "Назад" для использования в template
+ */
+const previousButtonState = computed(() => ({
+  disabled: filteredIndex.value <= 0,
+  classes:
+    filteredIndex.value <= 0
+      ? "bg-slate-700/50 text-slate-500 cursor-not-allowed"
+      : "bg-slate-700/80 text-slate-300 hover:bg-slate-700 hover:text-white",
+}));
+
+/**
+ * Состояние кнопки "Вперед" для использования в template
+ */
+const nextButtonState = computed(() => ({
+  disabled: filteredIndex.value >= currentSubtitles.value.length - 1,
+  classes:
+    filteredIndex.value >= currentSubtitles.value.length - 1
+      ? "bg-slate-700/50 text-slate-500 cursor-not-allowed"
+      : "bg-slate-700/80 text-slate-300 hover:bg-slate-700 hover:text-white",
+}));
+
+/**
+ * Информация о текущей позиции для отображения в индикаторе
+ */
+const positionInfo = computed(() => ({
+  current: filteredIndex.value + 1,
+  total: currentSubtitles.value.length,
+}));
+
+/**
+ * Переход к предыдущему субтитру в отфильтрованном списке
+ * Вычисляет оригинальный индекс и обновляет modelValue
+ */
 const goToPrevious = () => {
-  subtitleStore.goToPrevious()
-  emit('update:modelValue', subtitleStore.currentIndex)
-}
+  if (filteredIndex.value > 0) {
+    const targetSubtitle = currentSubtitles.value[filteredIndex.value - 1];
+    if (targetSubtitle) {
+      const originalIndex = subtitleStore.subtitles.findIndex(
+        (s) => s.id === targetSubtitle.id
+      );
+      if (originalIndex !== -1) {
+        emit("update:modelValue", originalIndex);
+      }
+    }
+  }
+};
 
+/**
+ * Переход к следующему субтитру в отфильтрованном списке
+ * Вычисляет оригинальный индекс и обновляет modelValue
+ */
 const goToNext = () => {
-  subtitleStore.goToNext()
-  emit('update:modelValue', subtitleStore.currentIndex)
-}
+  if (filteredIndex.value < currentSubtitles.value.length - 1) {
+    const targetSubtitle = currentSubtitles.value[filteredIndex.value + 1];
+    if (targetSubtitle) {
+      const originalIndex = subtitleStore.subtitles.findIndex(
+        (s) => s.id === targetSubtitle.id
+      );
+      if (originalIndex !== -1) {
+        emit("update:modelValue", originalIndex);
+      }
+    }
+  }
+};
 </script>
 
 <style scoped>

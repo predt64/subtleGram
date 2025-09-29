@@ -3,9 +3,6 @@ import { getQwenService } from './src/services/qwenService';
 import { analysisService } from './src/services/analysisService';
 import { slangService } from './src/services/slangService';
 import { loadAppConfig, validateConfig } from './src/utils/config';
-import { SubtitleEntry } from './src/types';
-import { tokenizeSubtitles } from './src/utils/tokenization';
-import { fallbackSegment } from './src/utils/fallbackSegmentation';
 
 /**
  * Integration test for new Translation Guide functionality
@@ -68,49 +65,7 @@ async function runIntegrationTests() {
     failed++;
   }
 
-  // Test 4: Tokenization utility
-  console.log('\n🔤 Test 4: Tokenization');
-  try {
-    const mockSubtitles: SubtitleEntry[] = [
-      { id: 1, start: '00:00:01.000', end: '00:00:05.000', text: 'Hello world. I\'m fine!' }
-    ];
-    const tokens = tokenizeSubtitles(mockSubtitles);
-    console.log('   AI Response: Tokens created:', tokens);
-    if (tokens.length === 4 && tokens[0]?.text === 'Hello' && tokens[2]?.text === "I'm") {
-      console.log('✅ Tokenization works:', tokens.length, 'tokens created');
-      passed++;
-    } else {
-      console.error('❌ Tokenization failed:', tokens);
-      failed++;
-    }
-  } catch (error) {
-    console.error('❌ Tokenization test failed:', error);
-    failed++;
-  }
-
-  // Test 5: Fallback segmentation
-  console.log('\n🔧 Test 5: Fallback segmentation');
-  try {
-    const mockTokens = [
-      { id: 0, entryIndex: 0, charStart: 0, charEnd: 5, text: 'Hello', norm: 'Hello' },
-      { id: 1, entryIndex: 0, charStart: 6, charEnd: 11, text: 'world', norm: 'world' },
-      { id: 2, entryIndex: 0, charStart: 12, charEnd: 13, text: '.', norm: '.' }
-    ];
-    const segments = fallbackSegment(mockTokens, 'Hello world.');
-    console.log('   AI Response: Segments created:', segments);
-    if (segments.length > 0 && segments[0]?.text?.includes('Hello')) {
-      console.log('✅ Fallback segmentation works:', segments.length, 'segments');
-      passed++;
-    } else {
-      console.error('❌ Fallback segmentation failed:', segments);
-      failed++;
-    }
-  } catch (error) {
-    console.error('❌ Fallback segmentation test failed:', error);
-    failed++;
-  }
-
-  // Test 6: Slang service
+  // Test 4: Slang service
   console.log('\n🕺 Test 6: Slang service');
   try {
     // Mock fetch для теста (если API недоступен)
@@ -137,9 +92,6 @@ async function runIntegrationTests() {
   // Test 7: Translation Guide (mock Qwen and fetch)
   console.log('\n📖 Test 7: Translation Guide');
   try {
-    const mockSubtitles: SubtitleEntry[] = [
-      { id: 1, start: '00:00:01.000', end: '00:00:05.000', text: 'I gotta go.' }
-    ];
     // Mock Qwen responses and fetch for UD
     const originalChatCompletion = getQwenService().chatCompletion;
     const mockResponse = { data: [{ meaning: 'Got to', example: 'I gotta go', word: 'gotta' }] };
@@ -149,7 +101,7 @@ async function runIntegrationTests() {
       choices: [{ message: { content: 'Analysis: Simple sentence. Slang: gotta. {"slang": ["gotta"]}' } }]
     } as any);
 
-    const guide = await analysisService.createTranslationGuide(mockSubtitles, {
+    const guide = await analysisService.createTranslationGuide({
       sentenceText: 'I gotta go.',
       context: { prev: 'Hello', next: 'See you' }
     });

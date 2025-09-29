@@ -61,17 +61,13 @@
         <div class="bg-slate-800/50 p-4 border border-slate-700/50 rounded-lg">
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-2">
-              <span class="font-medium text-green-400 text-sm"
-                >Естественный перевод</span
-              >
-              <div
-                class="bg-green-500/20 px-2 py-1 rounded text-green-300 text-xs"
-              >
-                85%
+              <span class="font-medium text-green-400 text-sm">Естественный перевод</span>
+              <div class="bg-green-500/20 px-2 py-1 rounded text-green-300 text-xs">
+                {{ analysisData?.translation.confidence }}%
               </div>
             </div>
             <p class="text-white leading-relaxed">
-              Мне нужно идти домой прямо сейчас.
+              {{ analysisData?.translation.natural }}
             </p>
           </div>
 
@@ -82,13 +78,11 @@
             <div class="space-y-2 text-sm">
               <div class="flex items-center gap-2">
                 <span class="text-slate-400">Формальный:</span>
-                <span class="text-slate-300"
-                  >Мне необходимо отправиться домой в данный момент.</span
-                >
+                <span class="text-slate-300">{{ analysisData?.translation.styles.formal }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-slate-400">Разговорный:</span>
-                <span class="text-slate-300">Мне пора домой уже.</span>
+                <span class="text-slate-300">{{ analysisData?.translation.styles.casual }}</span>
               </div>
             </div>
           </div>
@@ -104,19 +98,13 @@
               Ключевые особенности:
             </h4>
             <ul class="space-y-2 text-slate-300 text-sm">
-              <li class="flex items-start gap-2">
+              <li
+                v-for="feature in analysisData?.grammar.features || []"
+                :key="feature.title"
+                class="flex items-start gap-2"
+              >
                 <span class="mt-1 text-yellow-400">•</span>
-                <span
-                  ><strong>Время:</strong> Present Simple в значении
-                  будущего</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="mt-1 text-yellow-400">•</span>
-                <span
-                  ><strong>Модальность:</strong> Выражение необходимости (have
-                  to)</span
-                >
+                <span><strong>{{ feature.title }}:</strong> {{ feature.description }}</span>
               </li>
             </ul>
           </div>
@@ -126,10 +114,7 @@
               Подробное объяснение:
             </h4>
             <p class="text-slate-300 text-sm leading-relaxed">
-              Предложение выражает необходимость немедленного действия. "Gotta"
-              - это разговорная форма "have got to", которая часто используется
-              в американском английском для выражения обязательств или
-              необходимости.
+              {{ analysisData?.grammar.explanation }}
             </p>
           </div>
         </div>
@@ -155,7 +140,9 @@
                 />
               </svg>
             </div>
-            <p class="text-slate-400 text-sm">Сленг не обнаружен</p>
+            <p class="text-slate-400 text-sm">
+              {{ analysisData?.hasSlang ? 'Обнаружен сленг' : 'Сленг не обнаружен' }}
+            </p>
           </div>
         </div>
       </div>
@@ -164,10 +151,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { computed, watch } from "vue";
 import { useSubtitleStore } from "@/shared/stores/subtitle"
 
-// Props
 interface Props {
   modelValue?: number;
 }
@@ -177,15 +163,45 @@ const emit = defineEmits<{
   "update:modelValue": [index: number];
 }>();
 
-// Данные из store
 const subtitleStore = useSubtitleStore();
 
-// Вычисляемые свойства
 const selectedSubtitle = computed(() =>
-  props.modelValue !== undefined ? subtitleStore.subtitles[props.modelValue] : null
+  props.modelValue !== undefined && props.modelValue >= 0
+    ? subtitleStore.subtitles[props.modelValue] || null
+    : null
 );
 
-// Методы
+/**
+ * Моковые данные анализа для демонстрации (в реальном приложении приходят из API)
+ */
+const analysisData = computed(() => {
+  if (!selectedSubtitle.value) return null;
+
+  return {
+    translation: {
+      natural: "Мне нужно идти домой прямо сейчас.",
+      confidence: 85,
+      styles: {
+        formal: "Мне необходимо отправиться домой в данный момент.",
+        casual: "Мне пора домой уже."
+      }
+    },
+    grammar: {
+      features: [
+        { title: "Время", description: "Present Simple в значении будущего" },
+        { title: "Модальность", description: "Выражение необходимости (have to)" }
+      ],
+      explanation: "Предложение выражает необходимость немедленного действия. \"Gotta\" - это разговорная форма \"have got to\", которая часто используется в американском английском для выражения обязательств или необходимости."
+    },
+    hasSlang: false // В будущем можно анализировать через API
+  };
+});
+
+/**
+ * Форматирует время субтитра, показывая только минуты и секунды
+ * @param timeString - строка времени в формате HH:MM:SS.mmm
+ * @returns отформатированное время (MM:SS)
+ */
 const formatTime = (timeString: string): string => {
   const parts = timeString.split(":");
   if (parts.length >= 2) {
@@ -194,13 +210,16 @@ const formatTime = (timeString: string): string => {
   return timeString;
 };
 
-// Следим за изменениями в modelValue
+/**
+ * Следит за изменениями выбранного субтитра
+ * Логирует изменения для отладки (пока без реального анализа)
+ */
 watch(
   () => props.modelValue,
   (newIndex) => {
-    if (newIndex !== undefined) {
+    if (newIndex !== undefined && newIndex >= 0) {
       console.log("Анализ субтитра:", subtitleStore.subtitles[newIndex]);
-      // TODO: Запустить анализ выбранного субтитра
+      // TODO: Запустить анализ выбранного субтитра через API
     }
   }
 );

@@ -1,19 +1,23 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
-import type { SubtitleFile } from './types'
+import type { SubtitleFile } from '@/shared/types'
 
+/**
+ * Store для управления субтитрами
+ * Хранит массив субтитров, имя файла и текущую позицию навигации
+ */
 export const useSubtitleStore = defineStore('subtitle', () => {
-  // Состояние - инициализируем без storage, заполним в onMounted
   const subtitles = ref<SubtitleFile[]>([])
   const filename = ref<string>('')
-  const currentIndex = ref<number>(0)
   const searchQuery = ref<string>('')
 
-  // Инициализируем storage только на клиенте
+  /**
+   * Инициализация sessionStorage только на клиенте
+   * VueUse useStorage работает только в браузере, поэтому инициализируем после монтирования
+   */
   onMounted(() => {
     if (typeof window !== 'undefined') {
-      // Создаем storage с sessionStorage
       const subtitlesStorage = useStorage<SubtitleFile[]>(
         'subtitles',
         [],
@@ -32,6 +36,7 @@ export const useSubtitleStore = defineStore('subtitle', () => {
         }
       )
 
+      // Storage для имени файла
       const filenameStorage = useStorage<string>(
         'filename',
         '',
@@ -44,39 +49,32 @@ export const useSubtitleStore = defineStore('subtitle', () => {
         }
       )
 
-      // Синхронизируем с реактивными переменными
+      // Восстанавливаем сохраненные данные
       subtitles.value = subtitlesStorage.value
       filename.value = filenameStorage.value
 
-      // Следим за изменениями и сохраняем
+      // Автоматически сохраняем изменения субтитров
       watch(subtitles, (newValue) => {
         subtitlesStorage.value = newValue
       }, { deep: true })
 
+      // Автоматически сохраняем изменения имени файла
       watch(filename, (newValue) => {
         filenameStorage.value = newValue
       })
     }
   })
 
-  // Геттеры
-  const currentSubtitle = computed(() =>
-    subtitles.value[currentIndex.value] || null
-  )
+  // === ГЕТТЕРЫ ===
 
+  /**
+   * Проверяет, загружены ли субтитры
+   */
   const hasSubtitles = computed(() => subtitles.value.length > 0)
 
-  const previousSubtitle = computed(() =>
-    currentIndex.value > 0 ? subtitles.value[currentIndex.value - 1] : null
-  )
-
-  const nextSubtitle = computed(() =>
-    currentIndex.value < subtitles.value.length - 1
-      ? subtitles.value[currentIndex.value + 1]
-      : null
-  )
-
-  // Фильтрация субтитров по поисковому запросу
+  /**
+   * Возвращает субтитры, отфильтрованные по поисковому запросу
+   */
   const filteredSubtitles = computed(() => {
     if (!searchQuery.value) return subtitles.value
 
@@ -86,61 +84,44 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     )
   })
 
-  // Действия
+  // === ДЕЙСТВИЯ ===
+
+  /**
+   * Устанавливает новый массив субтитров и имя файла
+   * @param newSubtitles - массив субтитров для установки
+   * @param newFilename - имя файла субтитров
+   */
   const setSubtitles = (newSubtitles: SubtitleFile[], newFilename: string = '') => {
     subtitles.value = newSubtitles
     filename.value = newFilename
-    currentIndex.value = 0
     // Сохранение происходит автоматически через watchers
   }
 
-  const setCurrentIndex = (index: number) => {
-    if (index >= 0 && index < subtitles.value.length) {
-      currentIndex.value = index
-    }
-  }
 
+  /**
+   * Устанавливает поисковый запрос для фильтрации субтитров
+   * @param query - поисковая строка
+   */
   const setSearchQuery = (query: string) => {
     searchQuery.value = query
   }
 
-  const goToPrevious = () => {
-    const currentFilteredIndex = findFilteredIndex(subtitles.value[currentIndex.value]?.id || 0)
-    if (currentFilteredIndex > 0) {
-      const newFilteredIndex = currentFilteredIndex - 1
-      const targetSubtitle = filteredSubtitles.value[newFilteredIndex]
-      if (targetSubtitle) {
-        const originalIndex = subtitles.value.findIndex(s => s.id === targetSubtitle.id)
-        if (originalIndex !== -1) {
-          currentIndex.value = originalIndex
-        }
-      }
-    }
-  }
 
-  const goToNext = () => {
-    const currentFilteredIndex = findFilteredIndex(subtitles.value[currentIndex.value]?.id || 0)
-    if (currentFilteredIndex < filteredSubtitles.value.length - 1) {
-      const newFilteredIndex = currentFilteredIndex + 1
-      const targetSubtitle = filteredSubtitles.value[newFilteredIndex]
-      if (targetSubtitle) {
-        const originalIndex = subtitles.value.findIndex(s => s.id === targetSubtitle.id)
-        if (originalIndex !== -1) {
-          currentIndex.value = originalIndex
-        }
-      }
-    }
-  }
-
+  /**
+   * Очищает все данные субтитров и сбрасывает состояние
+   */
   const clear = () => {
     subtitles.value = []
     filename.value = ''
-    currentIndex.value = 0
     searchQuery.value = ''
     // Сохранение происходит автоматически через watchers
   }
 
-  // Найти индекс субтитра в отфильтрованном массиве
+  /**
+   * Находит индекс субтитра в отфильтрованном массиве
+   * @param subtitleId - ID субтитра для поиска
+   * @returns индекс в отфильтрованном массиве или 0
+   */
   const findFilteredIndex = (subtitleId: number): number => {
     // Если нет поиска, возвращаем индекс в оригинальном массиве
     if (!searchQuery.value) {
@@ -157,26 +138,22 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     return filtered.findIndex(s => s.id === subtitleId)
   }
 
+  /**
+   * Экспортируемые свойства и методы store
+   */
   return {
     // Состояние
     subtitles,
     filename,
-    currentIndex,
     searchQuery,
 
     // Геттеры
-    currentSubtitle,
     hasSubtitles,
-    previousSubtitle,
-    nextSubtitle,
     filteredSubtitles,
 
     // Действия
     setSubtitles,
-    setCurrentIndex,
     setSearchQuery,
-    goToPrevious,
-    goToNext,
     clear,
     findFilteredIndex,
   }

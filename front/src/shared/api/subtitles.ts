@@ -1,35 +1,6 @@
 const API_BASE_URL = 'http://localhost:3001/api'
 
-import { useSubtitleStore } from '@/shared/stores/subtitle'
-import { useUploadStore } from '@/shared/stores/upload'
-
-export interface ApiResponse<T = any> {
-  success?: boolean
-  message: string
-  data?: T
-  error?: string
-  details?: any
-  warnings?: string[]
-}
-
-export interface SubtitleFile {
-  id: number
-  start: string
-  end: string
-  text: string
-}
-
-export interface UploadResponseData {
-  filename: string
-  subtitlesCount: number
-  subtitles: SubtitleFile[]
-}
-
-export interface UploadError {
-  error: string
-  message: string
-  details?: any
-}
+import type { ApiResponse, SubtitleFile, UploadResponseData, UploadError } from '@/shared/types'
 
 /**
  * API клиент для работы с субтитрами
@@ -97,21 +68,6 @@ export const subtitlesApi = {
 
     return await response.json()
   },
-
-  /**
-   * Проверка здоровья API субтитров
-   */
-  async checkMainHealth(): Promise<ApiResponse<any>> {
-    const response = await fetch(`${API_BASE_URL}/subtitles/health`, {
-      method: 'GET',
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    return await response.json()
-  },
 }
 
 /**
@@ -135,30 +91,5 @@ export const apiUtils = {
     }
 
     return defaultMessage
-  },
-
-  /**
-   * Проверка доступности API
-   */
-  async checkApiAvailability(): Promise<boolean> {
-    try {
-      await subtitlesApi.checkHealth()
-      return true
-    } catch {
-      return false
-    }
-  },
-
-  /**
-   * Очистка данных загрузки
-   */
-  clearUploadData(): void {
-    // VueUse автоматически управляет sessionStorage в stores,
-    // поэтому просто очищаем stores
-    const subtitleStore = useSubtitleStore()
-    const uploadStore = useUploadStore()
-
-    subtitleStore.clear()
-    uploadStore.reset()
   },
 }

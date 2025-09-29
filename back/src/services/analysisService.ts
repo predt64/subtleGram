@@ -1,8 +1,7 @@
-import { SubtitleEntry, TranslationGuide } from '../types';
+import { TranslationGuide } from '../types';
 import { getQwenService, QwenMessage } from './qwenService';
 import { getAnalysisConfig } from '../utils/config';
 import { slangService } from './slangService';
-import { tokenizeSubtitles } from '../utils/tokenization';
 
 /**
  * Высокоуровневый сервис анализа субтитров с использованием Qwen AI
@@ -20,7 +19,7 @@ export class AnalysisService {
    * Строит контекст предложения
    */
   private buildSentenceContext(sentenceText: string, context?: { prev: string; next: string }): { text: string; prev: string; next: string } {
-      return {
+    return {
       text: sentenceText,
       prev: context?.prev || '',
       next: context?.next || ''
@@ -31,13 +30,13 @@ export class AnalysisService {
    * Анализирует предложение
    */
   async analyzeSentence(context: { text: string; prev: string; next: string }): Promise<any> {
-      const messages: QwenMessage[] = [
+    const messages: QwenMessage[] = [
       { role: 'system', content: getQwenService().generateSystemPrompt('translation') },
       { role: 'user', content: `Анализируй предложение: "${context.text}". Контекст: предыдущее: "${context.prev}", следующее: "${context.next}". Будь лаконичен. Ответь на русском языке. Обязательно выдели сленг в JSON: {"slang": ["word1"]}.` }
     ];
     const config = getAnalysisConfig('translation');
     const response = await getQwenService().chatCompletionWithMarkers(messages, config);
-      const content = response.choices[0]?.message?.content || '';
+    const content = response.choices[0]?.message?.content || '';
     return getQwenService().parseStructuredResponse(content);
   }
 
@@ -58,26 +57,23 @@ export class AnalysisService {
    * Создает TranslationGuide для предложения
    */
   async createTranslationGuide(
-    subtitles: SubtitleEntry[],
     options: {
       sentenceText: string;  // текст предложения для анализа
       context?: { prev: string; next: string };  // контекст предложения
     }
   ): Promise<TranslationGuide> {
     const sentenceContext = this.buildSentenceContext(options.sentenceText, options.context);
-    if (!sentenceContext.text) return { tokens: [], segments: [], translations: [], slang: [] };
+    if (!sentenceContext.text) return { segments: [], translations: [], slang: [] };
 
     const cacheKey = sentenceContext.text;
     if (this.sentenceCache.has(cacheKey)) {
       return this.sentenceCache.get(cacheKey)!;
     }
 
-    const tokens = tokenizeSubtitles(subtitles.filter(s => s.text.includes(sentenceContext.text)));
     const analysis = await this.analyzeSentence(sentenceContext);
     const slang = await this.enrichWithSlangFromAI(analysis);
 
     const guide: TranslationGuide = {
-      tokens,
       segments: [{ id: 'seg_1', wordStart: 0, wordEnd: 1, text: sentenceContext.text, reasoning: [], difficulty: { cefr: 'B1', score: 5, factors: [] }, features: [] }],
       translations: [{ segmentId: 'seg_1', variants: [{ style: 'natural', text: 'Перевод', confidence: 0.8 }], explanation: { type: 'simple', summary: 'Simple', details: 'Details', notes: [] } }],
       slang
@@ -86,19 +82,6 @@ export class AnalysisService {
     this.sentenceCache.set(cacheKey, guide);
     return guide;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 /**
