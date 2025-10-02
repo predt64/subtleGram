@@ -93,7 +93,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
  * Health check эндпоинт для проверки статуса сервера
  * Используется для мониторинга и load balancer'ов
  */
-app.get('/health', (_req: Request, res: Response) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),

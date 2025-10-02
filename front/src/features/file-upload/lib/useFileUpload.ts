@@ -14,22 +14,18 @@ export type UploadState = 'idle' | 'uploading' | 'success' | 'error'
  * @returns Объект с состоянием, геттерами и методами для работы с файлами
  */
 export function useFileUpload() {
-  // Используем сторы
   const subtitleStore = useSubtitleStore()
   const uploadStore = useUploadStore()
 
-  // Счетчик для правильной работы drag-n-drop (избегает event bubbling)
   let dragCounter = 0
 
-  // Получаем данные из сторов
   const uploadState = computed(() => uploadStore.uploadState)
   const uploadedFile = computed(() => uploadStore.uploadedFile)
-  const subtitles = computed(() => subtitleStore.subtitles)
+  const sentenceCards = computed(() => subtitleStore.sentenceCards)
   const filename = computed(() => subtitleStore.filename)
   const error = computed(() => uploadStore.error)
   const isDragOver = computed(() => uploadStore.isDragOver)
 
-  // Вычисляемые свойства
   const isUploading = computed(() => uploadStore.isUploading)
   const hasFile = computed(() => uploadStore.hasFile)
   const hasSubtitles = computed(() => subtitleStore.hasSubtitles)
@@ -135,11 +131,10 @@ export function useFileUpload() {
     try {
       const result = await subtitlesApi.uploadFile(file)
 
-      // Сохраняем загруженные субтитры в store
       subtitleStore.setSubtitles(result.data!.subtitles, result.data!.filename)
       uploadStore.setSuccess()
 
-      console.log(`Файл "${subtitleStore.filename}" успешно загружен. Субтитров: ${subtitleStore.subtitles.length}`)
+      console.log(`Файл "${subtitleStore.filename}" успешно загружен. Предложений: ${sentenceCards.value.length}`)
 
     } catch (err) {
       console.error('Ошибка загрузки:', err)
@@ -177,7 +172,7 @@ export function useFileUpload() {
     // Состояния
     uploadState,
     uploadedFile,
-    subtitles,
+    sentenceCards,
     filename,
     error,
     isDragOver,

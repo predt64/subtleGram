@@ -131,16 +131,16 @@ const subtitleStore = useSubtitleStore();
 const searchQuery = ref("");
 const isApiAvailable = ref(false);
 
-const subtitlesCount = computed(() => subtitleStore.subtitles.length);
+const subtitlesCount = computed(() => subtitleStore.sentenceCards.length);
 
 /**
  * Форматированный текст количества субтитров
  */
 const subtitlesText = computed(() => {
   const count = subtitlesCount.value;
-  if (count === 1) return "1 субтитр";
-  if (count < 5) return `${count} субтитра`;
-  return `${count} субтитров`;
+  if (count === 1) return "1 предложение";
+  if (count < 5) return `${count} предложения`;
+  return `${count} предложений`;
 });
 
 /**

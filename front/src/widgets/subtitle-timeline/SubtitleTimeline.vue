@@ -22,12 +22,7 @@
         @click="selectSubtitle(index)"
         :class="getSubtitleClasses(index)"
       >
-        <!-- Время -->
-        <div class="mb-1 font-mono text-slate-400 text-xs">
-          {{ formatTime(subtitle.start) }}
-        </div>
-
-        <!-- Текст субтитра -->
+        <!-- Текст карточки (предложение) -->
         <div
           :class="getSubtitleTextClasses(index)"
           v-html="
@@ -115,7 +110,7 @@ const highlightedIndex = computed(() => {
   }
 
   return subtitleStore.findFilteredIndex(
-    subtitleStore.subtitles[selectedSubtitleIndex.value]?.id || 0
+    subtitleStore.sentenceCards[selectedSubtitleIndex.value]?.id || 0
   );
 });
 
@@ -186,7 +181,7 @@ const highlightSearchTerms = (text: string, query: string): string => {
 const selectSubtitle = (filteredIndex: number) => {
   const subtitle = filteredSubtitles.value[filteredIndex];
   if (subtitle) {
-    const originalIndex = subtitleStore.subtitles.findIndex(
+    const originalIndex = subtitleStore.sentenceCards.findIndex(
       (s) => s.id === subtitle.id
     );
     if (originalIndex !== -1) {
@@ -196,18 +191,8 @@ const selectSubtitle = (filteredIndex: number) => {
 };
 
 /**
- * Форматирует время субтитра для отображения
- * Преобразуем HH:MM:SS.mmm в MM:SS
- * @param timeString - строка времени в формате HH:MM:SS.mmm
- * @returns отформатированное время MM:SS
+ * Время сейчас не отображаем. Кастомный скроллбар добавим позже.
  */
-const formatTime = (timeString: string): string => {
-  const parts = timeString.split(":");
-  if (parts.length >= 2) {
-    return `${parts[1]}:${parts[2]}`; // MM:SS.mmm
-  }
-  return timeString;
-};
 
 /**
  * Возвращает статус анализа субтитра
@@ -285,7 +270,7 @@ const setSubtitleRef = (filteredIndex: number, el: any) => {
  * @param event - событие клавиатуры
  */
 const handleKeydown = (event: KeyboardEvent) => {
-  if (!subtitleStore.subtitles.length) return;
+  if (!subtitleStore.sentenceCards.length) return;
 
   const currentIndex = selectedSubtitleIndex.value;
   let newIndex = currentIndex;
@@ -297,7 +282,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       break;
     case "ArrowDown":
       event.preventDefault();
-      newIndex = Math.min(subtitleStore.subtitles.length - 1, currentIndex + 1);
+      newIndex = Math.min(subtitleStore.sentenceCards.length - 1, currentIndex + 1);
       break;
     case "Enter":
     case " ":
@@ -324,7 +309,7 @@ watch(
   (newIndex, oldIndex) => {
     if (newIndex !== undefined && newIndex !== oldIndex && newIndex >= 0) {
       setTimeout(() => {
-        const subtitle = subtitleStore.subtitles[newIndex];
+        const subtitle = subtitleStore.sentenceCards[newIndex];
         if (subtitle) {
           const filteredIndex = subtitleStore.findFilteredIndex(subtitle.id);
           if (

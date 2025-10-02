@@ -103,7 +103,7 @@
                     {{ filename }}
                   </p>
                   <p class="mb-4 text-slate-300">
-                    {{ subtitles.length }} субтитров найдено
+                    {{ sentenceCards.length }} субтитров найдено
                   </p>
 
                   <div class="flex flex-col gap-3">
@@ -208,7 +208,7 @@ import { useFileUpload } from "@/features/file-upload";
 
 const {
   uploadedFile,
-  subtitles,
+  sentenceCards,
   filename,
   error,
   isDragOver,

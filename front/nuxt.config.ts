@@ -33,17 +33,6 @@ export default defineNuxtConfig({
     }
   },
 
-  app: {
-    head: {
-      htmlAttrs: {
-        lang: 'ru'
-      },
-      link: [
-        { rel: 'preload', as: 'style', href: '/_nuxt/entry.css' },
-      ]
-    }
-  },
-
   experimental: {
     payloadExtraction: false,
   },

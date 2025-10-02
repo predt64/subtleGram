@@ -2,13 +2,15 @@ import { defineStore } from 'pinia'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
 import type { SubtitleFile } from '@/shared/types'
+import type { SentenceCard } from '@/shared/lib/normalizeToSentences'
+import { normalizeToSentences } from '@/shared/lib/normalizeToSentences'
 
 /**
  * Store для управления субтитрами
  * Хранит массив субтитров, имя файла и текущую позицию навигации
  */
 export const useSubtitleStore = defineStore('subtitle', () => {
-  const subtitles = ref<SubtitleFile[]>([])
+  const rawSubtitles = ref<SubtitleFile[]>([])
   const filename = ref<string>('')
   const searchQuery = ref<string>('')
 
@@ -18,8 +20,8 @@ export const useSubtitleStore = defineStore('subtitle', () => {
    */
   onMounted(() => {
     if (typeof window !== 'undefined') {
-      const subtitlesStorage = useStorage<SubtitleFile[]>(
-        'subtitles',
+      const rawSubtitlesStorage = useStorage<SubtitleFile[]>(
+        'rawSubtitles',
         [],
         sessionStorage,
         {
@@ -50,12 +52,12 @@ export const useSubtitleStore = defineStore('subtitle', () => {
       )
 
       // Восстанавливаем сохраненные данные
-      subtitles.value = subtitlesStorage.value
+      rawSubtitles.value = rawSubtitlesStorage.value
       filename.value = filenameStorage.value
 
-      // Автоматически сохраняем изменения субтитров
-      watch(subtitles, (newValue) => {
-        subtitlesStorage.value = newValue
+      // Автоматически сохраняем изменения сырых субтитров
+      watch(rawSubtitles, (newValue) => {
+        rawSubtitlesStorage.value = newValue
       }, { deep: true })
 
       // Автоматически сохраняем изменения имени файла
@@ -70,16 +72,24 @@ export const useSubtitleStore = defineStore('subtitle', () => {
   /**
    * Проверяет, загружены ли субтитры
    */
-  const hasSubtitles = computed(() => subtitles.value.length > 0)
+  const hasSubtitles = computed(() => rawSubtitles.value.length > 0)
 
   /**
-   * Возвращает субтитры, отфильтрованные по поисковому запросу
+   * Карточки предложений вычисляются на лету из сырых субтитров
+   * Ничего не сохраняем — при перезагрузке страницы пересчитаем
+   */
+  const sentenceCards = computed<SentenceCard[]>(() => {
+    return normalizeToSentences(rawSubtitles.value)
+  })
+
+  /**
+   * Возвращает карточки, отфильтрованные по поисковому запросу
    */
   const filteredSubtitles = computed(() => {
-    if (!searchQuery.value) return subtitles.value
+    if (!searchQuery.value) return sentenceCards.value
 
     const query = searchQuery.value.toLowerCase()
-    return subtitles.value.filter(subtitle =>
+    return sentenceCards.value.filter(subtitle =>
       subtitle.text.toLowerCase().includes(query)
     )
   })
@@ -87,16 +97,14 @@ export const useSubtitleStore = defineStore('subtitle', () => {
   // === ДЕЙСТВИЯ ===
 
   /**
-   * Устанавливает новый массив субтитров и имя файла
+   * Устанавливает новый массив субтитров и имя файла (совместимость)
    * @param newSubtitles - массив субтитров для установки
    * @param newFilename - имя файла субтитров
    */
   const setSubtitles = (newSubtitles: SubtitleFile[], newFilename: string = '') => {
-    subtitles.value = newSubtitles
-    filename.value = newFilename
-    // Сохранение происходит автоматически через watchers
+    rawSubtitles.value = newSubtitles
+    if (newFilename) filename.value = newFilename
   }
-
 
   /**
    * Устанавливает поисковый запрос для фильтрации субтитров
@@ -106,36 +114,32 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     searchQuery.value = query
   }
 
-
   /**
    * Очищает все данные субтитров и сбрасывает состояние
    */
   const clear = () => {
-    subtitles.value = []
+    rawSubtitles.value = []
     filename.value = ''
     searchQuery.value = ''
     // Сохранение происходит автоматически через watchers
   }
 
   /**
-   * Находит индекс субтитра в отфильтрованном массиве
-   * @param subtitleId - ID субтитра для поиска
+   * Находит индекс карточки в отфильтрованном массиве
+   * @param subtitleId - ID карточки для поиска
    * @returns индекс в отфильтрованном массиве или 0
    */
   const findFilteredIndex = (subtitleId: number): number => {
-    // Если нет поиска, возвращаем индекс в оригинальном массиве
+    // Если нет поиска, возвращаем индекс в полном списке карточек
     if (!searchQuery.value) {
-      const subtitle = subtitles.value.find(s => s.id === subtitleId)
-      return subtitle ? subtitles.value.indexOf(subtitle) : 0
+      const card = sentenceCards.value.find(s => s.id === subtitleId)
+      return card ? sentenceCards.value.indexOf(card) : 0
     }
 
-    // Ищем субтитр в оригинальном массиве
-    const subtitle = subtitles.value.find(s => s.id === subtitleId)
-    if (!subtitle) return 0
-
-    // Находим его индекс в отфильтрованном массиве
+    // Находим индекс в отфильтрованном массиве
     const filtered = filteredSubtitles.value
-    return filtered.findIndex(s => s.id === subtitleId)
+    const idx = filtered.findIndex(s => s.id === subtitleId)
+    return idx >= 0 ? idx : 0
   }
 
   /**
@@ -143,7 +147,8 @@ export const useSubtitleStore = defineStore('subtitle', () => {
    */
   return {
     // Состояние
-    subtitles,
+    rawSubtitles,
+    sentenceCards,
     filename,
     searchQuery,
 
@@ -153,6 +158,7 @@ export const useSubtitleStore = defineStore('subtitle', () => {
 
     // Действия
     setSubtitles,
+    setRawSubtitles,
     setSearchQuery,
     clear,
     findFilteredIndex,

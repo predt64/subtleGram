@@ -47,11 +47,6 @@
           <p class="text-white text-lg leading-relaxed">
             {{ selectedSubtitle.text }}
           </p>
-          <div class="flex items-center gap-2 mt-3 text-slate-400 text-sm">
-            <span>{{ formatTime(selectedSubtitle.start) }}</span>
-            <span>→</span>
-            <span>{{ formatTime(selectedSubtitle.end) }}</span>
-          </div>
         </div>
       </div>
 
@@ -167,7 +162,7 @@ const subtitleStore = useSubtitleStore();
 
 const selectedSubtitle = computed(() =>
   props.modelValue !== undefined && props.modelValue >= 0
-    ? subtitleStore.subtitles[props.modelValue] || null
+    ? subtitleStore.sentenceCards[props.modelValue] || null
     : null
 );
 
@@ -202,13 +197,7 @@ const analysisData = computed(() => {
  * @param timeString - строка времени в формате HH:MM:SS.mmm
  * @returns отформатированное время (MM:SS)
  */
-const formatTime = (timeString: string): string => {
-  const parts = timeString.split(":");
-  if (parts.length >= 2) {
-    return `${parts[1]}:${parts[2]}`;
-  }
-  return timeString;
-};
+// Время не отображаем — будет кастомный скроллбар позже
 
 /**
  * Следит за изменениями выбранного субтитра
@@ -218,7 +207,7 @@ watch(
   () => props.modelValue,
   (newIndex) => {
     if (newIndex !== undefined && newIndex >= 0) {
-      console.log("Анализ субтитра:", subtitleStore.subtitles[newIndex]);
+      console.log("Анализ карточки:", subtitleStore.sentenceCards[newIndex]);
       // TODO: Запустить анализ выбранного субтитра через API
     }
   }

@@ -120,14 +120,14 @@ const selectedSubtitleIndex = computed(() => props.modelValue || 0);
 const currentSubtitles = computed(() =>
   subtitleStore.searchQuery
     ? subtitleStore.filteredSubtitles
-    : subtitleStore.subtitles
+    : subtitleStore.sentenceCards
 );
 
 const filteredIndex = computed(() => {
   if (!subtitleStore.searchQuery) return selectedSubtitleIndex.value;
 
   return subtitleStore.findFilteredIndex(
-    subtitleStore.subtitles[selectedSubtitleIndex.value]?.id || 0
+    subtitleStore.sentenceCards[selectedSubtitleIndex.value]?.id || 0
   );
 });
 
@@ -185,7 +185,7 @@ const goToPrevious = () => {
   if (filteredIndex.value > 0) {
     const targetSubtitle = currentSubtitles.value[filteredIndex.value - 1];
     if (targetSubtitle) {
-      const originalIndex = subtitleStore.subtitles.findIndex(
+      const originalIndex = subtitleStore.sentenceCards.findIndex(
         (s) => s.id === targetSubtitle.id
       );
       if (originalIndex !== -1) {
@@ -203,7 +203,7 @@ const goToNext = () => {
   if (filteredIndex.value < currentSubtitles.value.length - 1) {
     const targetSubtitle = currentSubtitles.value[filteredIndex.value + 1];
     if (targetSubtitle) {
-      const originalIndex = subtitleStore.subtitles.findIndex(
+      const originalIndex = subtitleStore.sentenceCards.findIndex(
         (s) => s.id === targetSubtitle.id
       );
       if (originalIndex !== -1) {
