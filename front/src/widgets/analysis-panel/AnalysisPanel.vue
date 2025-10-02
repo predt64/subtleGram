@@ -147,7 +147,7 @@
 
 <script setup lang="ts">
 import { computed, watch } from "vue";
-import { useSubtitleStore } from "@/shared/stores/subtitle"
+import { useSubtitleStore } from "@/entities/subtitle"
 
 interface Props {
   modelValue?: number;

@@ -158,7 +158,6 @@ export const useSubtitleStore = defineStore('subtitle', () => {
 
     // Действия
     setSubtitles,
-    setRawSubtitles,
     setSearchQuery,
     clear,
     findFilteredIndex,

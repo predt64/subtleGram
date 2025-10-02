@@ -119,7 +119,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
-import { useSubtitleStore } from "@/shared/stores/subtitle";
+import { useSubtitleStore } from "@/entities/subtitle";
 import { subtitlesApi } from "@/shared/api";
 
 const emit = defineEmits<{

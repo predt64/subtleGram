@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { subtitlesApi, apiUtils } from '@/shared/api'
-import { useSubtitleStore } from '@/shared/stores/subtitle'
-import { useUploadStore } from '@/shared/stores/upload'
+import { useSubtitleStore } from '@/entities/subtitle'
+import { useUploadStore } from '@/features/file-upload'
 
 /**
  * Состояния загрузки
