@@ -4,6 +4,7 @@ import { useStorage } from '@vueuse/core'
 import type { SubtitleFile } from '@/shared/types'
 import type { SentenceCard } from '@/shared/lib/normalizeToSentences'
 import { normalizeToSentences } from '@/shared/lib/normalizeToSentences'
+import { parseTimeToMs } from '@/shared/lib/timelineMarks';
 
 /**
  * Store для управления субтитрами
@@ -82,6 +83,10 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     return normalizeToSentences(rawSubtitles.value)
   })
 
+  const totalDurationMs = computed(() => {
+    return sentenceCards.value.reduce((max, card) => Math.max(max, parseTimeToMs(card.end || '00:00:00')), 0);
+  })
+
   /**
    * Возвращает карточки, отфильтрованные по поисковому запросу
    */
@@ -155,6 +160,7 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     // Геттеры
     hasSubtitles,
     filteredSubtitles,
+    totalDurationMs,
 
     // Действия
     setSubtitles,

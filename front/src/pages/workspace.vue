@@ -43,16 +43,16 @@
       <WorkspaceHeader @search="handleSearch" />
 
       <!-- Основное содержимое -->
-      <div class="flex flex-1 overflow-hidden workspace-content">
+      <div class="flex flex-1 min-h-0 overflow-hidden workspace-content">
         <!-- Левая колонка - Timeline субтитров -->
         <div
-          class="flex flex-col bg-slate-800/50 border-slate-700/50 border-r w-80"
+          class="flex flex-col bg-slate-800/50 border-slate-700/50 border-r w-96 h-full min-h-0"
         >
           <SubtitleTimeline v-model="selectedSubtitleIndex" />
         </div>
 
         <!-- Правая колонка - Детальный анализ -->
-        <div class="flex-1 bg-slate-900 overflow-hidden">
+        <div class="flex-1 bg-slate-900 min-h-0 overflow-hidden">
           <AnalysisPanel v-model="selectedSubtitleIndex" />
         </div>
       </div>

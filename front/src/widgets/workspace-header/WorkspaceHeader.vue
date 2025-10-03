@@ -49,51 +49,6 @@
       </div>
     </div>
 
-    <!-- Центральная часть - Поиск -->
-    <div class="flex-1 mx-8 max-w-md">
-      <div class="relative">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Поиск по субтитрам..."
-          class="bg-slate-700/50 px-4 py-2 pr-10 pl-10 border border-slate-600/50 focus:border-blue-500 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-full text-white text-sm placeholder-slate-400"
-        />
-        <svg
-          class="top-1/2 left-3 absolute w-4 h-4 text-slate-400 -translate-y-1/2 transform"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-        <!-- Крестик для очистки -->
-        <button
-          v-if="searchQuery"
-          @click="clearSearch"
-          class="top-1/2 right-3 absolute flex justify-center items-center w-4 h-4 text-slate-400 hover:text-slate-300 transition-colors -translate-y-1/2 transform"
-        >
-          <svg
-            class="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
-
     <!-- Правая часть - Статус и информация о файле -->
     <div class="flex items-center gap-4">
       <!-- Статус сервиса -->
@@ -118,17 +73,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useSubtitleStore } from "@/entities/subtitle";
 import { subtitlesApi } from "@/shared/api";
 
-const emit = defineEmits<{
-  search: [query: string];
-}>();
-
 const subtitleStore = useSubtitleStore();
 
-const searchQuery = ref("");
 const isApiAvailable = ref(false);
 
 const subtitlesCount = computed(() => subtitleStore.sentenceCards.length);
@@ -163,27 +113,6 @@ const fileInfo = computed(() => ({
 const goBack = async () => {
   await navigateTo("/");
 };
-
-const clearSearch = () => {
-  searchQuery.value = "";
-};
-
-// Debounce для поиска (предотвращает слишком частые запросы)
-let searchTimeout: NodeJS.Timeout | null = null;
-
-/**
- * Следим за изменениями в поисковом запросе
- * Синхронизирует локальное состояние с родительским компонентом и store
- * Использует debounce для оптимизации производительности
- */
-watch(searchQuery, (newQuery) => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-
-  searchTimeout = setTimeout(() => {
-    emit("search", newQuery);
-    subtitleStore.setSearchQuery(newQuery);
-  }, 300);
-});
 
 onMounted(async () => {
   try {
