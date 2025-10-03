@@ -7,7 +7,7 @@
     :aria-valuemax="totalMs"
     :aria-valuenow="currentTimeMs"
     ref="rootEl"
-    @click="onClick"
+    @mousedown="onMouseDown"
     @mousemove="onMouseMove"
     @mouseleave="onMouseLeave"
     @mouseup="onDragEnd"
@@ -73,6 +73,14 @@ const emit = defineEmits<{
 const marks = computed<TimelineMark[]>(() => {
   if (props.showMarks === false) return [];
   if (props.subtitles.length === 0 || props.subtitleGeometry.length === 0) return [];
+
+  // Проверяем соответствие длин массивов subtitles и geometry
+  // Это предотвращает генерацию некорректных меток при асинхронном обновлении
+  if (props.subtitles.length !== props.subtitleGeometry.length) {
+    console.warn('Subtitles and geometry length mismatch, skipping marks generation');
+    return [];
+  }
+
   return generateMarksFromGeometry(
     props.subtitles,
     props.subtitleGeometry,
@@ -106,17 +114,24 @@ const getLocalYFromClient = (clientY: number) => {
   return clientY - rect.top;
 };
 
-const onClick = (e: MouseEvent) => {
-  if (isDragging.value) return; // ignore while dragging
-  if (Date.now() < suppressClickUntil.value) return; // ignore immediately after drag
+const onMouseDown = (e: MouseEvent) => {
+  console.log('onMouseDown');
+  // Ignore if clicking on handle (handle has its own mousedown handler)
+  if ((e.target as HTMLElement)?.classList.contains('handle')) return;
+
   const y = getLocalYFromClient(e.clientY);
   // Calculate new handle position based on click Y
   const newHandleTop = clamp(y - handleHeight.value / 2, 0, maxHandleTop.value);
   const scrollable = Math.max(1, props.totalScrollHeight - props.containerHeight);
   const ratio = newHandleTop / maxHandleTop.value;
   const newScrollTop = Math.floor(ratio * scrollable);
-  
-  // Вычисляем время ближайшего субтитра
+
+  // Start dragging from the new position
+  isDragging.value = true;
+  dragStartY.value = y;
+  dragStartScrollTop.value = newScrollTop;
+
+  // Вычисляем время ближайшего субтитра и перемещаем
   if (props.subtitles.length > 0) {
     const subtitleIndex = Math.round(ratio * (props.subtitles.length - 1));
     const clampedIndex = clamp(subtitleIndex, 0, props.subtitles.length - 1);
@@ -125,6 +140,10 @@ const onClick = (e: MouseEvent) => {
     emit("updateScrollTop", newScrollTop);
     emit("seek", timeMs);
   }
+
+  e.preventDefault();
+  window.addEventListener('mousemove', onWindowMouseMove);
+  window.addEventListener('mouseup', onWindowMouseUp);
 };
 
 const onDragStart = (e: MouseEvent) => {
