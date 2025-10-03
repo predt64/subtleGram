@@ -76,7 +76,8 @@ const marks = computed<TimelineMark[]>(() => {
   return generateMarksFromGeometry(
     props.subtitles,
     props.subtitleGeometry,
-    props.totalMs
+    props.totalMs,
+    props.containerHeight
   );
 });
 

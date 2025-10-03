@@ -46,32 +46,37 @@ export function parseTimeToMs(timeStr: string): number {
  * @param subtitles - массив субтитров с полями start/end
  * @param geometry - реальная геометрия элементов из DOM
  * @param totalMs - общая длительность в миллисекундах
+ * @param containerHeight - высота видимой области контейнера
  */
 export function generateMarksFromGeometry(
   subtitles: Array<{ start: string; end: string }>,
   geometry: SubtitleGeometry[],
-  totalMs: number
+  totalMs: number,
+  containerHeight: number
 ): TimelineMark[] {
-  console.log('generateMarksFromGeometry', subtitles, geometry, totalMs);
+  console.log('generateMarksFromGeometry', subtitles, geometry, totalMs, containerHeight);
   if (subtitles.length === 0 || geometry.length === 0) return [];
-  
+
   const useHours = totalMs >= 3600000;
   const marks: TimelineMark[] = [];
-  
-  // Вычисляем общую высоту контента
+
+  // Вычисляем общую высоту контента и скроллируемую область
   const lastGeom = geometry[geometry.length - 1];
   if (!lastGeom) return [];
-  const totalHeight = lastGeom.top + lastGeom.height;
-  
-  if (totalHeight === 0) return [];
+  const totalScrollHeight = lastGeom.top + lastGeom.height;
+  const scrollableHeight = Math.max(1, totalScrollHeight - containerHeight);
+
+  console.log('totalScrollHeight', totalScrollHeight, 'scrollableHeight', scrollableHeight);
+
+  if (scrollableHeight === 0) return [];
   
   // Major метки каждые 5% (20 major меток на весь таймлайн)
   const majorCount = 20;
   const majorPositions: number[] = [];
-  
-  // Генерируем major метки
+
+  // Генерируем major метки в диапазоне скроллируемой области
   for (let i = 0; i <= majorCount; i++) {
-    const targetY = (totalHeight / majorCount) * i;
+    const targetY = (scrollableHeight / majorCount) * i;
     majorPositions.push(targetY);
     
     // Найти субтитр, ближайший к этой Y-позиции
