@@ -132,19 +132,19 @@ export const useSubtitleStore = defineStore('subtitle', () => {
   /**
    * Находит индекс карточки в отфильтрованном массиве
    * @param subtitleId - ID карточки для поиска
-   * @returns индекс в отфильтрованном массиве или 0
+   * @returns индекс в отфильтрованном массиве или -1 если не найден
    */
   const findFilteredIndex = (subtitleId: number): number => {
     // Если нет поиска, возвращаем индекс в полном списке карточек
     if (!searchQuery.value) {
       const card = sentenceCards.value.find(s => s.id === subtitleId)
-      return card ? sentenceCards.value.indexOf(card) : 0
+      return card ? sentenceCards.value.indexOf(card) : -1
     }
 
     // Находим индекс в отфильтрованном массиве
     const filtered = filteredSubtitles.value
     const idx = filtered.findIndex(s => s.id === subtitleId)
-    return idx >= 0 ? idx : 0
+    return idx >= 0 ? idx : -1
   }
 
   /**

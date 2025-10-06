@@ -50,3 +50,102 @@ export type UploadState =
   | 'uploading'
   | 'success'
   | 'error'
+
+
+/**
+ * Грамматическая особенность - краткое описание
+ */
+export interface GrammarFeature {
+  rule: string    // Название правила на английском
+  russian: string // Название правила на русском
+}
+
+/**
+ * Сложность текста по CEFR
+ */
+export interface Difficulty {
+  cefr: string // "B1", "C1" etc
+}
+
+/**
+ * Сегмент текста для анализа
+ */
+export interface TranslationSegment {
+  text: string
+  difficulty: Difficulty
+  features: GrammarFeature[]
+}
+
+/**
+ * Вариант перевода
+ */
+export interface TranslationVariant {
+  style: string // "natural", "formal", "casual" etc
+  text: string
+}
+
+/**
+ * Объяснение перевода - просто строка
+ */
+export type TranslationExplanation = string
+
+/**
+ * Перевод сегмента
+ */
+export interface TranslationData {
+  variants: TranslationVariant[]
+  explanation: TranslationExplanation
+}
+
+/**
+ * Определение сленга из Urban Dictionary
+ */
+export interface SlangDefinition {
+  definition: string
+  example: string
+  permalink: string
+}
+
+/**
+ * Карточка сленга
+ */
+export interface SlangCard {
+  term: string
+  ud: SlangDefinition
+}
+
+/**
+ * Результат анализа текста
+ */
+export interface AnalysisResult {
+  segments: TranslationSegment[]
+  translations: TranslationData[]
+  slang: SlangCard[]
+}
+
+/**
+ * Метаданные анализа
+ */
+export interface AnalysisMetadata {
+  processingTimeMs: number
+  timestamp: string
+  model: string
+  validationWarnings: string[]
+}
+
+/**
+ * Данные ответа при успешном анализе предложения
+ */
+export interface AnalyzeResponseData {
+  analysis: AnalysisResult
+  metadata: AnalysisMetadata
+}
+
+/**
+ * Состояния процесса анализа
+ */
+export type AnalysisState =
+  | 'idle'
+  | 'analyzing'
+  | 'success'
+  | 'error'

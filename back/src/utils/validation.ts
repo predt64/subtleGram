@@ -196,7 +196,7 @@ export const validationUtils = {
     const warnings: string[] = [];
 
     // Обязательные переменные окружения
-    const requiredVars = ['HF_TOKEN'];
+    const requiredVars = ['OPENROUTER_API_KEY'];
     const recommendedVars = ['PORT', 'NODE_ENV', 'FRONTEND_URL'];
 
     requiredVars.forEach(varName => {

@@ -5,19 +5,11 @@
 
 import { Request, Response } from 'express';
 import { analysisService } from '../services/analysisService';
-import { validationUtils } from '../utils/validation';
 
 /**
  * Структура тела запроса на анализ субтитров
  */
 interface AnalyzeRequestBody {
-  /** Массив субтитров для анализа */
-  subtitles: Array<{
-    id: number;      // Уникальный идентификатор субтитра
-    start: string;   // Время начала (формат HH:MM:SS.mmm)
-    end: string;     // Время окончания
-    text: string;    // Текст субтитра
-  }>;
   /** Текст предложения для анализа */
   sentenceText: string;
   /** Контекст предложения (предыдущее/следующее) */
@@ -25,6 +17,8 @@ interface AnalyzeRequestBody {
     prev: string;    // Предыдущее предложение
     next: string;    // Следующее предложение
   };
+  /** Название сериала для контекста */
+  seriesName?: string;
 }
 
 /**
@@ -46,27 +40,8 @@ export const analyzeController = {
     const startTime = Date.now();
 
     try {
-      // Извлекаем данные из тела запроса
-      const { subtitles } = req.body as AnalyzeRequestBody;
-
-      /**
-       * ВАЛИДАЦИЯ ВХОДНЫХ ДАННЫХ
-       * Проверяем корректность массива субтитров
-       */
-      const validation = validationUtils.validateSubtitles(subtitles);
-      if (!validation.isValid) {
-        // Возвращаем детальную информацию об ошибках валидации
-        res.status(400).json({
-          error: 'Ошибка валидации',
-          message: 'Предоставлены некорректные данные субтитров',
-          details: validation.errors,      // Критические ошибки
-          warnings: validation.warnings,   // Предупреждения
-        });
-        return;
-      }
-
       // Извлекаем параметры анализа
-      const { sentenceText, context } = req.body;
+      const { sentenceText, context, seriesName } = req.body as AnalyzeRequestBody;
 
       // Проверяем, что предоставлен текст предложения
       if (!sentenceText) {
@@ -77,10 +52,18 @@ export const analyzeController = {
         return;
       }
 
-      // Логируем предупреждения валидации, если они есть
-      if (validation.warnings.length > 0) {
-        console.warn('Предупреждения валидации:', validation.warnings);
-      }
+      // Флаг для отслеживания отмены запроса
+      let requestCancelled = false;
+
+      // Обработчик отмены запроса клиентом
+      const onRequestClose = () => {
+        requestCancelled = true;
+        console.log('Analysis request cancelled by client');
+      };
+
+      // Слушаем событие закрытия соединения
+      req.on('close', onRequestClose);
+      req.on('aborted', onRequestClose);
 
       /**
        * ВЫПОЛНЕНИЕ АНАЛИЗА
@@ -88,8 +71,19 @@ export const analyzeController = {
        */
       const analysisResult = await analysisService.createTranslationGuide({
         sentenceText,
-        context
+        ...(context && { context }),
+        ...(seriesName && { seriesName })
       });
+
+      // Убираем слушатели событий
+      req.removeListener('close', onRequestClose);
+      req.removeListener('aborted', onRequestClose);
+
+      // Проверяем, был ли запрос отменен клиентом
+      if (requestCancelled) {
+        console.log('Request was cancelled, not sending response');
+        return; // Не отправляем ответ
+      }
 
       // Вычисляем время обработки
       const processingTime = Date.now() - startTime;
@@ -103,13 +97,11 @@ export const analyzeController = {
         success: true,
         message: 'Анализ с помощью Qwen завершен успешно',
         data: {
-          subtitlesAnalyzed: subtitles.length, // Количество обработанных субтитров
           analysis: analysisResult,        // Результаты анализа
           metadata: {
             processingTimeMs: processingTime,    // Время обработки
             timestamp: new Date().toISOString(), // Время завершения
-            model: 'Qwen/Qwen3-Next-80B-A3B-Instruct', // Используемая модель
-            validationWarnings: validation.warnings // Предупреждения валидации
+            model: 'Qwen/Qwen3-Next-80B-A3B-Instruct' // Используемая модель
           }
         },
       });
@@ -128,7 +120,7 @@ export const analyzeController = {
         if (error.message.includes('API token') || error.message.includes('401')) {
           res.status(401).json({
             error: 'Ошибка аутентификации',
-            message: 'Неверный или отсутствующий токен Hugging Face',
+            message: 'Неверный или отсутствующий токен OpenRouter',
             details: error.message,
           });
           return;

@@ -29,15 +29,12 @@ export class SlangService {
       const data: any = await response.json();
 
       const list = Array.isArray(data.data) ? data.data : [];
-      const slangCards: SlangCard[] = list.slice(0, 2).map((item: any) => ({
-        tokenId: -1,
+      const slangCards: SlangCard[] = list.slice(0, 1).map((item: any) => ({
         term,
         ud: {
           definition: item.meaning || 'No definition',
           example: item.example || 'No example',
-          thumbs_up: 0, // Реальный API не имеет thumbs_up/thumbs_down, но оставим для совместимости
-          thumbs_down: 0,
-          permalink: `https://urbandictionary.com/define.php?term=${encodeURIComponent(term)}` // Генерируем, так как API не возвращает
+          permalink: `https://urbandictionary.com/define.php?term=${encodeURIComponent(term)}`
         }
       }));
 

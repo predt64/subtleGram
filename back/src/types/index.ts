@@ -68,7 +68,7 @@ export interface UploadedFile {
 export interface EnvironmentConfig {
   PORT: number;                    // Порт сервера
   NODE_ENV: 'development' | 'production' | 'test'; // Окружение Node.js
-  HF_TOKEN: string;               // Токен Hugging Face API
+  OPENROUTER_API_KEY: string;     // Токен OpenRouter API
   MAX_FILE_SIZE: number;          // Максимальный размер файла
   UPLOAD_DIR: string;             // Директория для загрузок
   FRONTEND_URL: string;           // URL фронтенд приложения
@@ -93,16 +93,6 @@ export interface AppError {
  * Типы сервисов
  */
 
-/**
- * Конфигурация Hugging Face API
- * Параметры для взаимодействия с AI моделями
- */
-export interface HuggingFaceConfig {
-  token: string;       // API токен
-  model: string;       // Название модели
-  maxRetries: number;  // Максимум повторных попыток
-  timeout: number;     // Таймаут запросов
-}
 
 /**
  * Типы валидации
@@ -268,18 +258,14 @@ export type DeepPartial<T> = {
  * Сегмент перевода - логический фрагмент для перевода
  */
 export interface TranslationSegment {
-  id: string;                    // Уникальный ID сегмента
-  wordStart: number;             // Начальный индекс слова
-  wordEnd: number;               // Конечный индекс слова
   text: string;                  // Текст сегмента
-  reasoning: string[];           // Причины объединения (например, ["parcellation_continuation"])
-  links?: { dependsOnSegmentId?: string; }; // Зависимости от других сегментов
   difficulty: {                  // Уровень сложности сегмента
     cefr: string;                // CEFR уровень (B1, C1, etc.)
-    score: number;               // Оценка 1-10
-    factors: string[];           // Факторы (["idiom", "colloquial"])
   };
-  features: string[];            // Особенности (["idiom", "slang_like"])
+  features: {                    // Грамматические особенности
+    rule: string;                // Название правила на английском
+    russian: string;             // Название правила на русском
+  }[];
 }
 
 /**
@@ -288,14 +274,12 @@ export interface TranslationSegment {
 export interface TranslationVariant {
   style: 'natural' | 'literal';  // Стиль перевода
   text: string;                  // Текст перевода
-  confidence: number;            // Уверенность 0-1
 }
 
 /**
  * Карточка сленга из Urban Dictionary
  */
 export interface SlangCard {
-  tokenId: number;               // ID токена, к которому относится
   term: string;                  // Термин (например, "gonna")
   ud: {                          // Данные из UD
     definition: string;            // Определение
@@ -310,14 +294,8 @@ export interface SlangCard {
 export interface TranslationGuide {
   segments: TranslationSegment[]; // Сегменты для перевода
   translations: {                // Переводы по сегментам
-    segmentId: string;
     variants: TranslationVariant[];
-    explanation?: {              // Объяснение для сложных случаев
-      type: string;                // Тип (например, "idiom_or_reference")
-      summary: string;             // Краткое описание
-      details: string;             // Детали
-      notes: string[];             // Заметки
-    };
+    explanation: string;          // Объяснение грамматики и перевода
   }[];
   slang: SlangCard[];            // Карточки сленга
 }

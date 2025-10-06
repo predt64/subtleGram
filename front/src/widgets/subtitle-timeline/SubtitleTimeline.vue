@@ -266,15 +266,19 @@ const emit = defineEmits<{
   "update:modelValue": [index: number];
 }>();
 
-const selectedSubtitleIndex = computed(() => props.modelValue || 0);
+const selectedSubtitleIndex = computed(() => props.modelValue ?? -1);
 
 const highlightedIndex = computed(() => {
+  if (selectedSubtitleIndex.value === -1) {
+    return -1;
+  }
+
   if (!subtitleStore.searchQuery) {
     return selectedSubtitleIndex.value;
   }
 
   return subtitleStore.findFilteredIndex(
-    subtitleStore.sentenceCards[selectedSubtitleIndex.value]?.id || 0
+    subtitleStore.sentenceCards[selectedSubtitleIndex.value]?.id || -1
   );
 });
 
@@ -371,8 +375,9 @@ const clearSearch = () => {
 watch(searchQuery, (newQuery) => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
-    if (subtitleStore.searchQuery !== newQuery) {
-      subtitleStore.setSearchQuery(newQuery);
+    const trimmedQuery = newQuery.trim();
+    if (subtitleStore.searchQuery !== trimmedQuery) {
+      subtitleStore.setSearchQuery(trimmedQuery);
     }
   }, 300);
 });
@@ -464,23 +469,29 @@ const setSubtitleRef = (filteredIndex: number, el: any) => {
 
 /**
  * Обрабатывает клавиатурную навигацию по субтитрам
- * Поддерживает стрелки вверх/вниз для навигации
+ * Поддерживает стрелки вверх/вниз для навигации по отфильтрованному массиву
  * @param event - событие клавиатуры
  */
 const handleKeydown = (event: KeyboardEvent) => {
-  if (!subtitleStore.sentenceCards.length) return;
+  // Не перехватываем клавиши, если фокус в поле поиска
+  if (event.target instanceof HTMLInputElement && event.target.type === 'text') {
+    return;
+  }
 
-  const currentIndex = selectedSubtitleIndex.value;
-  let newIndex = currentIndex;
+  if (!filteredSubtitles.value.length) return;
+
+  // Находим текущий индекс в отфильтрованном массиве
+  const currentFilteredIndex = highlightedIndex.value;
+  let newFilteredIndex = currentFilteredIndex;
 
   switch (event.key) {
     case "ArrowUp":
       event.preventDefault();
-      newIndex = Math.max(0, currentIndex - 1);
+      newFilteredIndex = Math.max(0, currentFilteredIndex - 1);
       break;
     case "ArrowDown":
       event.preventDefault();
-      newIndex = Math.min(subtitleStore.sentenceCards.length - 1, currentIndex + 1);
+      newFilteredIndex = Math.min(filteredSubtitles.value.length - 1, currentFilteredIndex + 1);
       break;
     case "Enter":
     case " ":
@@ -488,8 +499,17 @@ const handleKeydown = (event: KeyboardEvent) => {
       break;
   }
 
-  if (newIndex !== currentIndex) {
-    emit("update:modelValue", newIndex);
+  if (newFilteredIndex !== currentFilteredIndex && newFilteredIndex >= 0) {
+    // Преобразуем индекс в отфильтрованном массиве в индекс в полном массиве
+    const targetSubtitle = filteredSubtitles.value[newFilteredIndex];
+    if (targetSubtitle) {
+      const originalIndex = subtitleStore.sentenceCards.findIndex(
+        (s) => s.id === targetSubtitle.id
+      );
+      if (originalIndex !== -1) {
+        emit("update:modelValue", originalIndex);
+      }
+    }
   }
 };
 
@@ -522,7 +542,8 @@ watch(
         }
       }, 100);
     }
-  }
+  },
+  { immediate: true }  // Добавляем immediate: true для начальной загрузки
 );
 
 onMounted(() => {

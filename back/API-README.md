@@ -163,19 +163,12 @@ Content-Type: application/json
 **Body (JSON):**
 ```typescript
 {
-  "subtitles": [
-    {
-      "id": number,
-      "start": string,  // Формат: "00:00:00,000"
-      "end": string,    // Формат: "00:00:00,000"
-      "text": string
-    }
-  ],
-  "sentenceText": "I gotta go home now.",  // Текст предложения для анализа
-  "context": {         // Контекст предложения (опционально)
-    "prev": "Hello there",
-    "next": "See you later"
-  }
+  "sentenceText": "I'm here, Ravi.",     // Текст предложения для анализа
+  "context": {                           // Контекст предложения (опционально)
+    "prev": "Ravi, I need you to go to Major",
+    "next": "and find out where the bodies are"
+  },
+  "seriesName": "The Walking Dead"       // Название сериала для контекста (опционально)
 }
 ```
 
@@ -184,19 +177,12 @@ Content-Type: application/json
 curl -X POST http://localhost:3001/api/subtitles/analyze \
   -H "Content-Type: application/json" \
   -d '{
-    "subtitles": [
-      {
-        "id": 1,
-        "start": "00:00:01,000",
-        "end": "00:00:04,000",
-        "text": "I gotta go home now."
-      }
-    ],
-    "sentenceText": "I gotta go home now.",
+    "sentenceText": "I'\''m here, Ravi.",
     "context": {
-      "prev": "Hello there",
-      "next": "See you later"
-    }
+      "prev": "Ravi, I need you to go to Major",
+      "next": "and find out where the bodies are"
+    },
+    "seriesName": "The Walking Dead"
   }'
 ```
 
@@ -206,10 +192,11 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
 3. **Кэширование** - повторные запросы для того же предложения не вызывают повторный анализ
 
 **Результат:**
-- **Перевод** предложения целиком
-- **Объяснение** грамматики и сленга
+- **Перевод** предложения целиком с вариантами стилей
+- **Объяснение** грамматики и структуры предложения
 - **Определения** сленга из Urban Dictionary
 - **Уровень сложности** (B1, C1 и т.д.)
+- **Метаданные** анализа (время обработки, модель)
 
 **Возможные ответы:**
 
@@ -218,90 +205,43 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
 {
   "success": true,
   "message": "Анализ с помощью Qwen завершен успешно",
-  "data": {
-    "analysisType": "translation",
-    "subtitlesAnalyzed": 1,
+        "data": {
     "analysis": {
-      "tokens": [
-        {
-          "id": 0,
-          "entryIndex": 0,
-          "charStart": 0,
-          "charEnd": 1,
-          "text": "I",
-        },
-        {
-          "id": 1,
-          "entryIndex": 0,
-          "charStart": 2,
-          "charEnd": 7,
-          "text": "gotta",
-        },
-        {
-          "id": 2,
-          "entryIndex": 0,
-          "charStart": 8,
-          "charEnd": 11,
-          "text": "go",
-        },
-        {
-          "id": 3,
-          "entryIndex": 0,
-          "charStart": 12,
-          "charEnd": 17,
-          "text": "home",
-        },
-        {
-          "id": 4,
-          "entryIndex": 0,
-          "charStart": 18,
-          "charEnd": 22,
-          "text": "now",
-        },
-        {
-          "id": 5,
-          "entryIndex": 0,
-          "charStart": 22,
-          "charEnd": 23,
-          "text": ".",
-        }
-      ],
       "segments": [
         {
-          "id": "seg_1",
-          "wordStart": 0,
-          "wordEnd": 6,
-          "text": "I gotta go home now.",
-          "reasoning": [],
+          "text": "I'm here, Ravi.",
           "difficulty": {
-            "cefr": "B1",
-            "score": 5,
-            "factors": []
+            "cefr": "B1"
           },
-          "features": []
+          "features": [
+            {
+              "rule": "Present Simple",
+              "russian": "Present Simple"
+            },
+            {
+              "rule": "Contraction 'I am'",
+              "russian": "Сокращение 'I am'"
+            }
+          ]
         }
       ],
       "translations": [
         {
-          "segmentId": "seg_1",
           "variants": [
             {
               "style": "natural",
-              "text": "Мне нужно идти домой сейчас.",
-              "confidence": 0.8
+              "text": "Я здесь, Рави."
+            },
+            {
+              "style": "literal",
+              "text": "Я нахожусь здесь, Рави."
             }
           ],
-          "explanation": {
-            "type": "simple",
-            "summary": "Простое предложение в будущем времени",
-            "details": "Выражает необходимость действия. 'Gotta' - сленг для 'have got to'.",
-            "notes": ["Используется в разговорной речи"]
-          }
+          "explanation": "Фраза 'I'm here, Ravi.' — простое предложение в Present Simple с сокращением 'I'm' и обращением. Правило Present Simple используется здесь потому что описывает постоянное состояние. Сокращение 'I am' до 'I'm' является разговорной нормой английского языка."
         }
       ],
       "slang": [
         {
-          "tokenId": -1,
           "term": "gotta",
           "ud": {
             "definition": "Have got to",
@@ -345,7 +285,7 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
 ```json
 {
   "error": "Ошибка аутентификации",
-  "message": "Неверный или отсутствующий токен Hugging Face"
+  "message": "Неверный или отсутствующий токен OpenRouter"
 }
 ```
 
@@ -445,10 +385,51 @@ curl -X GET http://localhost:3001/api/subtitles/health
 }
 ```
 
+### GrammarFeature
+```typescript
+{
+  rule: string;    // Название грамматического правила на английском
+  russian: string; // Название правила на русском
+}
+```
+
+### TranslationVariant
+```typescript
+{
+  style: 'natural' | 'literal'; // Стиль перевода
+  text: string;                 // Текст перевода
+}
+```
+
+### Difficulty
+```typescript
+{
+  cefr: string; // Уровень сложности по CEFR (A1-C2)
+}
+```
+
+### TranslationSegment
+```typescript
+{
+  text: string;       // Текст сегмента
+  difficulty: {
+    cefr: string;     // Уровень сложности (B1, C1, etc.)
+  };
+  features: GrammarFeature[];
+}
+```
+
+### TranslationData
+```typescript
+{
+  variants: TranslationVariant[];     // Варианты перевода
+  explanation: string;                // Объяснение грамматики
+}
+```
+
 ### TranslationGuide
 ```typescript
 {
-  tokens: Token[];                    // Все слова в предложении
   segments: TranslationSegment[];     // Сегменты для перевода
   translations: TranslationData[];    // Переводы и объяснения
   slang: SlangCard[];                 // Определения сленга
@@ -458,24 +439,12 @@ curl -X GET http://localhost:3001/api/subtitles/health
 ### SlangCard
 ```typescript
 {
-  tokenId: number;    // ID токена (-1 для сленга)
   term: string;       // Сленг (например, "gotta")
   ud: {
     definition: string;  // Определение из UD
     example: string;     // Пример использования
     permalink: string;   // Ссылка на UD
   }
-}
-```
-
-### Token
-```typescript
-{
-  id: number;         // ID токена
-  entryIndex: number; // Индекс субтитра
-  charStart: number;  // Начальная позиция в тексте
-  charEnd: number;    // Конечная позиция в тексте
-  text: string;       // Оригинальный текст
 }
 ```
 
@@ -487,7 +456,7 @@ curl -X GET http://localhost:3001/api/subtitles/health
 |-----|----------|---------|
 | 200 | OK | Успешный запрос |
 | 400 | Bad Request | Неверные данные или обязательные поля |
-| 401 | Unauthorized | Неверный или отсутствующий HF_TOKEN |
+| 401 | Unauthorized | Неверный или отсутствующий OPENROUTER_API_KEY |
 | 404 | Not Found | Эндпоинт не существует |
 | 408 | Request Timeout | Запрос занял слишком много времени |
 | 429 | Too Many Requests | Превышен rate limit (100/15мин) |
@@ -507,10 +476,12 @@ curl -X GET http://localhost:3001/api/subtitles/health
 ### API
 - **Rate Limiting:** 100 запросов / 15 минут с одного IP
 - **Таймаут запроса:** 30 секунд
-- **Максимум субтитров:** Неограничено (зависит от памяти)
+- **Максимум длины предложения:** 1000 символов
 
 ### AI Модель
-- **Модель:** Qwen/Qwen3-Next-80B-A3B-Instruct
+- **Провайдер:** OpenRouter
+- **Основная модель:** qwen/qwen3-235b-a22b:free
+- **Резервная модель:** openai/gpt-oss-20b:free
 - **Максимум токенов:** 2000 на ответ
 - **Температура:** 0.4 (для переводов)
 - **Таймаут:** 30 секунд
@@ -531,9 +502,9 @@ curl -X POST http://localhost:3001/api/subtitles/upload \
 curl -X POST http://localhost:3001/api/subtitles/analyze \
   -H "Content-Type: application/json" \
   -d '{
-    "subtitles": [{"id":1,"start":"00:00:01,000","end":"00:00:04,000","text":"I gotta go."}],
-    "sentenceText": "I gotta go.",
-    "context": {"prev": "Hello", "next": "Bye"}
+    "sentenceText": "I'\''m here, Ravi.",
+    "context": {"prev": "Ravi, I need you", "next": "to go to Major"},
+    "seriesName": "The Walking Dead"
   }'
 ```
 

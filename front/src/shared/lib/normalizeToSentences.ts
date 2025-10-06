@@ -1,6 +1,10 @@
 import { split as sentenceSplit } from 'sentence-splitter'
 import type { SubtitleFile } from '@/shared/types'
 
+function stripHtmlTags(text: string): string {
+  return text.replace(/<[^>]*>/g, '')
+}
+
 /**
  * УТИЛИТА НОРМАЛИЗАЦИИ СУБТИТРОВ ДО ПРЕДЛОЖЕНИЙ
  * ------------------------------------------------
@@ -181,8 +185,7 @@ function buildConcatenatedText(raws: SubtitleFile[]): { concatenated: string; ch
 
   for (let i = 0; i < raws.length; i++) {
     const raw = raws[i]!
-    // Нормализуем пробелы внутри текста, но НЕ меняем сам raw.text
-    const normalized = String(raw.text ?? '').replace(/\s+/g, ' ').trim()
+    const normalized = stripHtmlTags(String(raw.text ?? '')).replace(/\s+/g, ' ').trim()
 
     const startChar = concatenated.length
     concatenated += normalized

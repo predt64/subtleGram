@@ -1,6 +1,12 @@
 const API_BASE_URL = 'http://localhost:3001/api'
 
-import type { ApiResponse, SubtitleFile, UploadResponseData, UploadError } from '@/shared/types'
+import type {
+  ApiResponse,
+  SubtitleFile,
+  UploadResponseData,
+  UploadError,
+  AnalyzeResponseData
+} from '@/shared/types'
 
 /**
  * API клиент для работы с субтитрами
@@ -29,14 +35,15 @@ export const subtitlesApi = {
    * Анализ субтитров
    */
   async analyzeSubtitles(
-    subtitles: SubtitleFile[],
     sentenceText: string,
-    context?: { prev: string; next: string }
-  ): Promise<ApiResponse<any>> {
+    context?: { prev: string; next: string },
+    seriesName?: string,
+    signal?: AbortSignal
+  ): Promise<ApiResponse<AnalyzeResponseData>> {
     const requestData = {
-      subtitles,
-      sentence: sentenceText,
-      context: context || { prev: '', next: '' }
+      sentenceText,
+      context: context || { prev: '', next: '' },
+      ...(seriesName && { seriesName })
     }
 
     const response = await fetch(`${API_BASE_URL}/subtitles/analyze`, {
@@ -45,6 +52,7 @@ export const subtitlesApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestData),
+      signal, // AbortSignal для отмены запроса
     })
 
     if (!response.ok) {

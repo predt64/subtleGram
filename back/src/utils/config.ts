@@ -1,15 +1,15 @@
 /**
- * Конфигурация приложения для анализа субтитров на базе Qwen
+ * Конфигурация приложения для анализа субтитров на базе OpenRouter
  *
  * Предоставляет централизованную конфигурацию для:
- * - Модели Qwen и параметров API
+ * - Модели OpenRouter (Qwen/GPT) и параметров API
  * - Загрузки файлов субтитров
  * - Ограничения частоты запросов
  * - Настроек сервера и окружения
  */
 
-export interface QwenModelConfig {
-  /** Идентификатор модели для Hugging Face */
+export interface OpenRouterModelConfig {
+  /** Идентификатор модели для OpenRouter */
   model: string;
   /** Температура для случайности ответов (0.0 - 2.0) */
   temperature: number;
@@ -22,6 +22,9 @@ export interface QwenModelConfig {
   /** Базовый URL для API запросов */
   baseUrl: string;
 }
+
+/** Устаревший интерфейс для обратной совместимости */
+export interface QwenModelConfig extends OpenRouterModelConfig {}
 
 export interface FileUploadConfig {
   /** Максимальный размер файла в байтах */
@@ -54,8 +57,8 @@ export interface AppConfig {
   nodeEnv: 'development' | 'production' | 'test';
   /** URL фронтенда для CORS */
   frontendUrl: string;
-  /** Токен Hugging Face API */
-  hfToken: string;
+  /** Токен OpenRouter API */
+  openRouterToken: string;
   /** Включить детальное логирование */
   enableLogging: boolean;
   /** Таймаут запросов для всех сервисов */
@@ -63,19 +66,32 @@ export interface AppConfig {
 }
 
 /**
- * Базовая конфигурация модели Qwen, оптимизированная для анализа субтитров
+ * Базовая конфигурация модели OpenRouter, оптимизированная для анализа субтитров
  *
- * Использует Qwen3-Next-80B-A3B-Instruct - самую мощную модель Qwen (на 2025г.)
- * с поддержкой длинных контекстов и сложных задач анализа
+ * Основная модель: qwen/qwen3-235b-a22b:free - мощная модель Qwen с бесплатным доступом
+ * Fallback: openai/gpt-oss-20b:free - альтернатива на базе GPT
  */
-export const qwenConfig: QwenModelConfig = {
-  model: 'Qwen/Qwen3-Next-80B-A3B-Instruct',
+export const openRouterConfig: OpenRouterModelConfig = {
+  model: 'openai/gpt-oss-20b:free', // Основная бесплатная модель Qwen
   temperature: 0.7,    // Средняя креативность для баланса качества и разнообразия
   maxTokens: 2000,     // Достаточно для подробных анализов
   timeout: 30000,      // 30 секунд таймаут
   maxRetries: 3,       // 3 попытки при ошибках
-  baseUrl: 'https://router.huggingface.co/v1/chat/completions'
+  baseUrl: 'https://openrouter.ai/api/v1/chat/completions'
 };
+
+/** Конфигурация fallback модели */
+export const openRouterFallbackConfig: OpenRouterModelConfig = {
+  model: 'openai/gpt-oss-20b:free', // Fallback модель
+  temperature: 0.7,
+  maxTokens: 2000,
+  timeout: 30000,
+  maxRetries: 2,       // Меньше попыток для fallback
+  baseUrl: 'https://openrouter.ai/api/v1/chat/completions'
+};
+
+/** Устаревший экспорт для обратной совместимости */
+export const qwenConfig: QwenModelConfig = openRouterConfig;
 
 /**
  * Конфигурации для анализа субтитров
@@ -133,7 +149,7 @@ export function loadAppConfig(): AppConfig {
     port: parseInt(process.env['PORT'] || '3001'),
     nodeEnv: (process.env['NODE_ENV'] as AppConfig['nodeEnv']) || 'development',
     frontendUrl: process.env['FRONTEND_URL'] || 'http://localhost:3000',
-    hfToken: process.env['HF_TOKEN'] || '',
+    openRouterToken: process.env['OPENROUTER_API_KEY'] || '',
     enableLogging: process.env['NODE_ENV'] === 'development',
     requestTimeout: 30000
   };
@@ -148,21 +164,22 @@ export function loadAppConfig(): AppConfig {
  * Валидирует конфигурацию приложения
  *
  * Проверяет обязательные параметры и корректность значений:
- * - Наличие и валидность HF_TOKEN
+ * - Наличие и валидность OPENROUTER_API_KEY
  * - Корректность порта сервера
  * - Допустимое значение NODE_ENV
  */
 export function validateConfig(config: AppConfig): void {
   const errors: string[] = [];
 
-  // Проверка токена Hugging Face
-  if (!config.hfToken) {
-    errors.push('Переменная окружения HF_TOKEN обязательна');
+  // Проверка токена OpenRouter (новый приоритетный)
+  if (!config.openRouterToken) {
+    errors.push('Переменная окружения OPENROUTER_API_KEY обязательна');
   }
 
-  if (config.hfToken.length < 10) {
-    errors.push('HF_TOKEN выглядит некорректно (слишком короткий)');
+  if (config.openRouterToken.length < 10) {
+    errors.push('OPENROUTER_API_KEY выглядит некорректно (слишком короткий)');
   }
+
 
   // Проверка порта
   if (config.port < 1000 || config.port > 9999) {
@@ -249,3 +266,4 @@ export function getAppConfig(): AppConfig {
   }
   return appConfigInstance;
 }
+

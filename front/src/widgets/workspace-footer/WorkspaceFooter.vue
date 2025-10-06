@@ -115,7 +115,7 @@ const emit = defineEmits<{
 
 const subtitleStore = useSubtitleStore();
 
-const selectedSubtitleIndex = computed(() => props.modelValue || 0);
+const selectedSubtitleIndex = computed(() => props.modelValue ?? -1);
 
 const currentSubtitles = computed(() =>
   subtitleStore.searchQuery
@@ -124,6 +124,7 @@ const currentSubtitles = computed(() =>
 );
 
 const filteredIndex = computed(() => {
+  if (selectedSubtitleIndex.value === -1) return -1;
   if (!subtitleStore.searchQuery) return selectedSubtitleIndex.value;
 
   return subtitleStore.findFilteredIndex(
@@ -132,7 +133,7 @@ const filteredIndex = computed(() => {
 });
 
 const selectedSubtitle = computed(
-  () => currentSubtitles.value[filteredIndex.value] || null
+  () => filteredIndex.value >= 0 ? currentSubtitles.value[filteredIndex.value] : null
 );
 
 const previousSubtitle = computed(() =>
@@ -142,7 +143,7 @@ const previousSubtitle = computed(() =>
 );
 
 const nextSubtitle = computed(() =>
-  filteredIndex.value < currentSubtitles.value.length - 1
+  filteredIndex.value >= 0 && filteredIndex.value < currentSubtitles.value.length - 1
     ? currentSubtitles.value[filteredIndex.value + 1]
     : null
 );
@@ -173,7 +174,7 @@ const nextButtonState = computed(() => ({
  * Информация о текущей позиции для отображения в индикаторе
  */
 const positionInfo = computed(() => ({
-  current: filteredIndex.value + 1,
+  current: selectedSubtitleIndex.value === -1 ? 0 : filteredIndex.value + 1,
   total: currentSubtitles.value.length,
 }));
 

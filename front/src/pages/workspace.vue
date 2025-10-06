@@ -81,7 +81,7 @@ const hasData = computed(() => subtitleStore.hasSubtitles);
 
 watch(hasData, (newHasData) => {
   if (newHasData && selectedSubtitleIndex.value === undefined) {
-    selectedSubtitleIndex.value = 0;
+    selectedSubtitleIndex.value = -1;
   }
 }, { immediate: true });
 

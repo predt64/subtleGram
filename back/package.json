@@ -22,15 +22,13 @@
     "subtitles",
     "analysis",
     "ai",
-    "huggingface",
+    "openrouter",
     "express",
     "typescript"
   ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "@huggingface/inference": "^4.7.1",
-    "@huggingface/transformers": "^3.7.2",
     "axios": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

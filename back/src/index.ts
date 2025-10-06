@@ -15,7 +15,7 @@ import { getAppConfig } from './utils/config';
 
 /**
  * Загружаем переменные окружения из .env файла
- * Должны быть установлены: HF_TOKEN, FRONTEND_URL, NODE_ENV, PORT
+ * Должны быть установлены: OPENROUTER_API_KEY, FRONTEND_URL, NODE_ENV, PORT
  */
 dotenv.config();
 
@@ -168,7 +168,6 @@ server.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
   console.log(`Среда: ${appConfig.nodeEnv}`);
   console.log(`Frontend URL: ${appConfig.frontendUrl}`);
-  console.log(`HF токен: ${appConfig.hfToken ? 'установлен' : 'не установлен'}`);
 });
 
 /**
