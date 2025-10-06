@@ -54,6 +54,7 @@ export function generateMarksFromGeometry(
   totalMs: number,
   containerHeight: number
 ): TimelineMark[] {
+  console.log('generateMarksFromGeometry', subtitles, geometry, totalMs, containerHeight);
   if (subtitles.length === 0 || geometry.length === 0) return [];
 
   const useHours = totalMs >= 3600000;
@@ -65,6 +66,7 @@ export function generateMarksFromGeometry(
   const totalScrollHeight = lastGeom.top + lastGeom.height;
   const scrollableHeight = Math.max(1, totalScrollHeight - containerHeight);
 
+  console.log('totalScrollHeight', totalScrollHeight, 'scrollableHeight', scrollableHeight);
 
   if (scrollableHeight === 0) return [];
   

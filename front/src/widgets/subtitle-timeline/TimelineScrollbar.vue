@@ -115,6 +115,7 @@ const getLocalYFromClient = (clientY: number) => {
 };
 
 const onMouseDown = (e: MouseEvent) => {
+  console.log('onMouseDown');
   // Ignore if clicking on handle (handle has its own mousedown handler)
   if ((e.target as HTMLElement)?.classList.contains('handle')) return;
 
