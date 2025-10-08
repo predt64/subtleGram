@@ -1,7 +1,7 @@
-import { TranslationGuide, TranslationSegment, TranslationVariant } from '@/types';
-import { getOpenRouterService, OpenRouterMessage } from '@/services/openRouterService';
-import { getAnalysisConfig } from '@/utils/config';
-import { slangService } from '@/services/slangService';
+import { TranslationGuide, TranslationSegment, TranslationVariant } from '../types';
+import { getOpenRouterService, OpenRouterMessage } from './openRouterService';
+import { getAnalysisConfig } from '../utils/config';
+import { slangService } from './slangService';
 
 /**
  * Структура ответа от Qwen AI анализа
