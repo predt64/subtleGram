@@ -27,6 +27,7 @@ export function useFileUpload() {
   const isDragOver = computed(() => uploadStore.isDragOver)
 
   const isUploading = computed(() => uploadStore.isUploading)
+  const isLoading = computed(() => subtitleStore.isLoading)
   const hasFile = computed(() => uploadStore.hasFile)
   const hasSubtitles = computed(() => subtitleStore.hasSubtitles)
 
@@ -177,6 +178,7 @@ export function useFileUpload() {
     error,
     isDragOver,
     isUploading,
+    isLoading,
     hasFile,
     hasSubtitles,
 

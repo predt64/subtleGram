@@ -37,7 +37,7 @@
         <div class="flex items-center gap-3 mb-4">
           <h2 class="font-bold text-white text-2xl">Анализ предложения</h2>
           <div
-            v-if="analysisData"
+            v-if="analysisState === 'success' && analysisData"
             class="bg-blue-500/20 px-3 py-1 rounded-full font-medium text-blue-300 text-sm"
           >
             {{ analysisData.analysis.segments?.[0]?.difficulty?.cefr || "B1" }}
@@ -123,11 +123,10 @@
 
             <div class="pt-4 border-slate-700/50 border-t">
               <div class="mb-2 font-medium text-blue-300 text-sm">
-                Варианты стилей:
+                Буквальный перевод
               </div>
               <div class="space-y-2 text-sm">
                 <div class="flex items-center gap-2">
-                  <span class="text-slate-400">Буквальный:</span>
                   <span class="text-slate-300">{{
                     analysisData.analysis.translations?.[0]?.variants?.find(
                       (v) => v.style === "literal"
@@ -154,9 +153,9 @@
                   v-for="feature in analysisData.analysis.segments?.[0]
                     ?.features"
                   :key="feature.rule"
-                  class="flex items-start gap-2"
+                  class="flex items-center gap-2"
                 >
-                  <span class="mt-1 text-yellow-400">•</span>
+                  <span class="text-yellow-400">•</span>
                   <span
                     ><strong>{{ feature.rule }}:</strong>
                     {{ feature.russian }}</span
@@ -368,6 +367,14 @@ const loadAnalysis = async (subtitleIndex: number) => {
     if (response.success && response.data) {
       analysisData.value = response.data;
       analysisState.value = "success";
+
+      // Отмечаем субтитр как проанализированный
+      if (props.modelValue !== undefined && props.modelValue >= 0) {
+        const subtitle = subtitleStore.sentenceCards[props.modelValue];
+        if (subtitle) {
+          subtitleStore.markAsAnalyzed(subtitle.text);
+        }
+      }
     } else {
       throw new Error(response.message || "Ошибка анализа");
     }

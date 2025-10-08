@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import { getOpenRouterService, OpenRouterMessage } from './src/services/openRouterService';
 import { analysisService } from './src/services/analysisService';
 import { slangService } from './src/services/slangService';
 import { loadAppConfig, validateConfig } from './src/utils/config';
@@ -42,35 +41,8 @@ async function runIntegrationTests() {
     failed++;
   }
 
-  // Test 3: OpenRouter service connectivity
-  console.log('\n💬 Test 3: OpenRouter service connectivity');
-  try {
-    const hasApiKey = !!process.env['OPENROUTER_API_KEY'];
-    if (!hasApiKey) {
-      console.log('⏭️  Skipping - OPENROUTER_API_KEY not configured');
-      passed++;
-      return;
-    }
-
-    const openRouterService = getOpenRouterService();
-    const messages: OpenRouterMessage[] = [
-      { role: 'system', content: 'You are a helpful assistant.' },
-      { role: 'user', content: 'Say "Hello World" and nothing else.' }
-    ];
-
-    const response = await openRouterService.chatCompletion(messages, { maxTokens: 50, temperature: 0.1 });
-    const content = response.choices[0]?.message?.content || '';
-    const hasContent = content.trim().length > 0;
-
-    console.log(hasContent ? '✅ OpenRouter API works' : '❌ OpenRouter API returned empty response');
-    passed++;
-  } catch (error) {
-    console.error('❌ OpenRouter test failed:', error instanceof Error ? error.message : 'Unknown error');
-    failed++;
-  }
-
-  // Test 4: Slang service
-  console.log('\n🕺 Test 4: Slang service');
+  // Test 3: Slang service
+  console.log('\n🕺 Test 3: Slang service');
   try {
     // Реальный вызов Urban Dictionary API
     const slang = await slangService.fetchSlang('test');
@@ -87,8 +59,8 @@ async function runIntegrationTests() {
     failed++;
   }
 
-  // Test 5: Full analysis pipeline
-  console.log('\n📖 Test 5: Full analysis pipeline');
+  // Test 4: Full analysis pipeline
+  console.log('\n📖 Test 4: Full analysis pipeline');
   try {
     const hasApiKey = !!process.env['OPENROUTER_API_KEY'];
     if (!hasApiKey) {
@@ -100,11 +72,9 @@ async function runIntegrationTests() {
     (analysisService as any).sentenceCache.clear();
 
     const guide = await analysisService.createTranslationGuide({
-      sentenceText: 'I gotta go.',
-      context: { prev: 'Hello', next: 'See you' },
+      sentenceText: "If I were you, I wouldn't argue",
       seriesName: 'The Walking Dead'
     });
-
     const isValid = guide.segments.length > 0 && guide.translations.length > 0;
     console.log(isValid ? '✅ Analysis pipeline works' : '❌ Analysis pipeline failed');
     passed++;

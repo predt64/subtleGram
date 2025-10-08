@@ -23,7 +23,8 @@ npm install
 #### 1. Получите API ключ OpenRouter
 - Перейдите на [openrouter.ai](https://openrouter.ai/keys)
 - Создайте аккаунт и получите API ключ
-- **Бесплатные модели:** `qwen/qwen3-235b-a22b:free`, `openai/gpt-oss-20b:free`
+- **Основная модель:** `mistral/mistral-small-3.2-24b-instruct:free` (mistral-small-3.2-24b-instruct)
+- **Резервная модель:** `openai/gpt-oss-20b:free` (GPT-OSS 20B)
 
 #### 2. Создайте `.env` файл:
 ```env

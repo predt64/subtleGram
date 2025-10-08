@@ -254,7 +254,7 @@ curl -X POST http://localhost:3001/api/subtitles/analyze \
     "metadata": {
       "processingTimeMs": 1250,
       "timestamp": "2025-01-24T10:30:00.000Z",
-      "model": "Qwen/Qwen3-Next-80B-A3B-Instruct",
+      "model": "mistral-small-3.2-24b-instruct + GPT-OSS-20B (fallback)",
       "validationWarnings": []
     }
   }
@@ -349,7 +349,19 @@ curl -X GET http://localhost:3001/api/subtitles/health
 {
   "status": "OK",
   "service": "subtitles",
-  "aiModel": "Qwen/Qwen3-Next-80B-A3B-Instruct",
+  "aiModel": "mistral-small-3.2-24b-instruct + GPT-OSS-20B (fallback)",
+  "models": {
+    "primary": {
+      "name": "mistral/mistral-small-3.2-24b-instruct:free",
+      "provider": "Mistral",
+      "description": "Основная бесплатная модель Mistral с высоким качеством анализа"
+    },
+    "fallback": {
+      "name": "openai/gpt-oss-20b:free",
+      "provider": "OpenAI",
+      "description": "Резервная модель на базе GPT для обеспечения доступности"
+    }
+  },
   "endpoints": [
     {
       "path": "POST /upload",
@@ -480,12 +492,12 @@ curl -X GET http://localhost:3001/api/subtitles/health
 
 ### AI Модель
 - **Провайдер:** OpenRouter
-- **Основная модель:** qwen/qwen3-235b-a22b:free
-- **Резервная модель:** openai/gpt-oss-20b:free
+- **Основная модель:** mistral/mistral-small-3.2-24b-instruct:free (mistral-small-3.2-24b-instruct - высокое качество)
+- **Резервная модель:** openai/gpt-oss-20b:free (GPT-OSS 20B - для доступности)
 - **Максимум токенов:** 2000 на ответ
 - **Температура:** 0.4 (для переводов)
 - **Таймаут:** 30 секунд
-- **Повторные попытки:** 3 раза
+- **Повторные попытки:** 3 раза (основная), 2 раза (резервная)
 
 ---
 

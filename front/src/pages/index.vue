@@ -41,8 +41,37 @@
           разобьём субтитры и подготовим их к анализу.
         </p>
 
+        <!-- Экран загрузки при восстановлении данных -->
+        <div v-if="isLoading" class="mb-8 text-center">
+          <div class="relative mb-6">
+            <div
+              class="flex justify-center items-center bg-slate-700/50 mx-auto rounded-full w-24 h-24"
+            >
+              <svg
+                class="w-12 h-12 text-blue-400 animate-spin"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </div>
+          </div>
+          <h3 class="mb-2 font-semibold text-white text-xl">
+            Загружаем данные
+          </h3>
+          <p class="text-slate-400">
+            Подготовка приложения...
+          </p>
+        </div>
+
         <!-- Зона загрузки -->
-        <div class="mb-8">
+        <div v-else class="mb-8">
           <h3
             class="mb-6 font-medium text-slate-400 text-sm uppercase tracking-wider"
           >
@@ -52,10 +81,10 @@
           <!-- Drag & Drop зона -->
           <div
             class="group relative"
-            @dragenter.prevent="handleDragEnter"
-            @dragover.prevent="handleDragOver"
-            @dragleave.prevent="handleDragLeave"
-            @drop.prevent="handleDrop"
+            @dragenter.prevent="handleDragEnterModified"
+            @dragover.prevent="handleDragOverModified"
+            @dragleave.prevent="handleDragLeaveModified"
+            @drop.prevent="handleDropModified"
           >
             <!-- Текстовый контент (статичный) -->
             <div class="z-20 relative p-8 md:p-12 text-center">
@@ -138,6 +167,7 @@
 
                   <label
                     class="bg-gradient-to-r from-blue-500 hover:from-blue-600 to-purple-600 hover:to-purple-700 shadow-lg hover:shadow-blue-500/25 px-6 py-3 rounded-lg font-semibold text-white transition-all cursor-pointer"
+                    @click="handleFileSelectClick"
                   >
                     <input
                       ref="fileInput"
@@ -213,6 +243,7 @@ const {
   error,
   isDragOver,
   isUploading,
+  isLoading,
   hasSubtitles,
   handleDragEnter,
   handleDragOver,
@@ -223,6 +254,8 @@ const {
   retry,
 } = useFileUpload();
 
+const isFileDialogOpen = ref(false);
+
 const fileInput = ref<HTMLInputElement>();
 
 const handleFileInput = (event: Event) => {
@@ -231,6 +264,20 @@ const handleFileInput = (event: Event) => {
   if (file) {
     handleFileSelect(file);
   }
+  // Сбрасываем флаг диалога при любом исходе (выбор файла или отмена)
+  isFileDialogOpen.value = false;
+};
+
+const handleFileSelectClick = () => {
+  isFileDialogOpen.value = true;
+
+  // Отслеживаем фокус окна браузера
+  const handleWindowFocus = () => {
+    isFileDialogOpen.value = false;
+    window.removeEventListener('focus', handleWindowFocus);
+  };
+
+  window.addEventListener('focus', handleWindowFocus);
 };
 
 const goToWorkspace = async () => {
@@ -239,15 +286,45 @@ const goToWorkspace = async () => {
 
 const loadAnotherFile = () => {
   reset();
+  isFileDialogOpen.value = false;
 
   if (fileInput.value) {
     fileInput.value.value = "";
   }
 };
 
-const dropZoneText = computed(() =>
-  isDragOver.value ? "Отпустите файл здесь" : "Перетащите файл сюда"
-);
+const handleDragEnterModified = (event: DragEvent) => {
+  if (!isFileDialogOpen.value) {
+    handleDragEnter(event);
+  }
+};
+
+const handleDragOverModified = (event: DragEvent) => {
+  if (!isFileDialogOpen.value) {
+    handleDragOver(event);
+  } else {
+    event.preventDefault(); // Предотвращаем drag-n-drop когда диалог открыт
+  }
+};
+
+const handleDragLeaveModified = (event: DragEvent) => {
+  if (!isFileDialogOpen.value) {
+    handleDragLeave(event);
+  }
+};
+
+const handleDropModified = (event: DragEvent) => {
+  if (!isFileDialogOpen.value) {
+    handleDrop(event);
+  }
+};
+
+const dropZoneText = computed(() => {
+  if (isFileDialogOpen.value) {
+    return "Пожалуйста, выберите файл в окне или закройте его";
+  }
+  return isDragOver.value ? "Отпустите файл здесь" : "Перетащите файл сюда";
+});
 </script>
 
 <style scoped>

@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import { analysisService } from '../services/analysisService';
+import { getCurrentModelInfo } from '../utils/config';
 
 /**
  * Структура тела запроса на анализ субтитров
@@ -101,7 +102,7 @@ export const analyzeController = {
           metadata: {
             processingTimeMs: processingTime,    // Время обработки
             timestamp: new Date().toISOString(), // Время завершения
-            model: 'Qwen/Qwen3-Next-80B-A3B-Instruct' // Используемая модель
+            model: getCurrentModelInfo().displayName // Используемая модель
           }
         },
       });

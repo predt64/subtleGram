@@ -8,7 +8,7 @@ import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { uploadController } from '../controllers/uploadController';
 import { analyzeController } from '../controllers/analyzeController';
-import { fileUploadConfig, rateLimitConfig } from '../utils/config';
+import { fileUploadConfig, rateLimitConfig, getCurrentModelInfo } from '../utils/config';
 
 const router = express.Router();
 
@@ -107,10 +107,15 @@ router.post('/analyze', express.json(), analysisRateLimit, analyzeController.ana
  * - Доступных функциях анализа
  */
 router.get('/health', (_req, res) => {
+  const modelInfo = getCurrentModelInfo();
   res.json({
     status: 'OK',
     service: 'subtitles',
-    aiModel: 'Qwen/Qwen3-Next-80B-A3B-Instruct',
+    aiModel: modelInfo.displayName,
+    models: {
+      primary: modelInfo.primary,
+      fallback: modelInfo.fallback
+    },
     endpoints: [
       {
         path: 'POST /upload',
@@ -119,7 +124,7 @@ router.get('/health', (_req, res) => {
       },
       {
         path: 'POST /analyze',
-        description: 'Анализ субтитров с помощью Qwen AI',
+        description: 'Анализ субтитров с помощью AI',
         rateLimit: `${rateLimitConfig.max} запросов в ${Math.ceil(rateLimitConfig.windowMs / 60000)} минут`
       }
     ],

@@ -364,8 +364,10 @@ const selectSubtitle = (filteredIndex: number) => {
  * @returns статус анализа ('analyzed' | 'new')
  */
 const getSubtitleStatus = (index: number): "analyzed" | "new" => {
-  // TODO: Проверять реальный статус анализа через API/store
-  return index % 3 === 0 ? "analyzed" : "new";
+  const subtitle = subtitleStore.sentenceCards[index];
+  if (!subtitle) return "new";
+
+  return subtitleStore.analyzedSubtitles.has(subtitle.text) ? "analyzed" : "new";
 };
 
 const clearSearch = () => {

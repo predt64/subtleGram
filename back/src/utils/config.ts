@@ -2,7 +2,7 @@
  * Конфигурация приложения для анализа субтитров на базе OpenRouter
  *
  * Предоставляет централизованную конфигурацию для:
- * - Модели OpenRouter (Qwen/GPT) и параметров API
+ * - Модели OpenRouter (mistral/GPT) и параметров API
  * - Загрузки файлов субтитров
  * - Ограничения частоты запросов
  * - Настроек сервера и окружения
@@ -68,11 +68,11 @@ export interface AppConfig {
 /**
  * Базовая конфигурация модели OpenRouter, оптимизированная для анализа субтитров
  *
- * Основная модель: qwen/qwen3-235b-a22b:free - мощная модель Qwen с бесплатным доступом
+ * Основная модель: mistral/mistral-small-3.2-24b-instruct:free - мощная модель mistral с бесплатным доступом
  * Fallback: openai/gpt-oss-20b:free - альтернатива на базе GPT
  */
 export const openRouterConfig: OpenRouterModelConfig = {
-  model: 'openai/gpt-oss-20b:free', // Основная бесплатная модель Qwen
+  model: 'mistralai/mistral-small-3.2-24b-instruct:free', // Основная бесплатная модель mistral
   temperature: 0.7,    // Средняя креативность для баланса качества и разнообразия
   maxTokens: 2000,     // Достаточно для подробных анализов
   timeout: 30000,      // 30 секунд таймаут
@@ -242,6 +242,27 @@ export const envConfigs = {
 export function getEnvConfig() {
   const nodeEnv = (process.env['NODE_ENV'] as keyof typeof envConfigs) || 'development';
   return envConfigs[nodeEnv];
+}
+
+/**
+ * Получает информацию о текущей модели AI
+ *
+ * Возвращает информацию о основной и fallback моделях для отображения в API
+ */
+export function getCurrentModelInfo() {
+  return {
+    primary: {
+      name: 'mistralai/mistral-small-3.2-24b-instruct:free',
+      provider: 'Qwen',
+      description: 'Основная бесплатная модель Qwen с высоким качеством анализа'
+    },
+    fallback: {
+      name: 'openai/gpt-oss-20b:free',
+      provider: 'OpenAI',
+      description: 'Резервная модель на базе GPT для обеспечения доступности'
+    },
+    displayName: 'mistral-small-3.2-24b-instruct + GPT-OSS-20B (fallback)'
+  };
 }
 
 /**

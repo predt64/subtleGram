@@ -2,8 +2,39 @@
   <div
     class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen text-white workspace"
   >
-    <!-- Если нет данных, показываем заглушку -->
-    <div v-if="!hasData" class="flex justify-center items-center h-screen">
+    <!-- Экран загрузки при восстановлении данных -->
+    <div v-if="isLoading" class="flex justify-center items-center h-screen">
+      <div class="text-center">
+        <div class="relative mb-6">
+          <div
+            class="flex justify-center items-center bg-slate-700/50 mx-auto rounded-full w-24 h-24"
+          >
+            <svg
+              class="w-12 h-12 text-blue-400 animate-spin"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </div>
+        </div>
+        <h2 class="mb-2 font-semibold text-white text-xl">
+          Загружаем данные
+        </h2>
+        <p class="text-slate-400">
+          Подготовка приложения...
+        </p>
+      </div>
+    </div>
+
+    <!-- Если нет данных после загрузки, показываем заглушку -->
+    <div v-else-if="!hasData" class="flex justify-center items-center h-screen">
       <div class="text-center">
         <div
           class="flex justify-center items-center bg-slate-700/50 mx-auto mb-6 rounded-full w-24 h-24"
@@ -78,12 +109,17 @@ const subtitleStore = useSubtitleStore();
 const selectedSubtitleIndex = ref<number | undefined>(undefined);
 
 const hasData = computed(() => subtitleStore.hasSubtitles);
+const isLoading = computed(() => subtitleStore.isLoading);
 
-watch(hasData, (newHasData) => {
-  if (newHasData && selectedSubtitleIndex.value === undefined) {
-    selectedSubtitleIndex.value = -1;
-  }
-}, { immediate: true });
+watch(
+  hasData,
+  (newHasData) => {
+    if (newHasData && selectedSubtitleIndex.value === undefined) {
+      selectedSubtitleIndex.value = -1;
+    }
+  },
+  { immediate: true }
+);
 
 /**
  * Переход на главную страницу загрузки файлов

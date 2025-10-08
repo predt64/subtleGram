@@ -1,7 +1,7 @@
-import { TranslationGuide, TranslationSegment, TranslationVariant } from '../types';
-import { getOpenRouterService, OpenRouterMessage } from './openRouterService';
-import { getAnalysisConfig } from '../utils/config';
-import { slangService } from './slangService';
+import { TranslationGuide, TranslationSegment, TranslationVariant } from '@/types';
+import { getOpenRouterService, OpenRouterMessage } from '@/services/openRouterService';
+import { getAnalysisConfig } from '@/utils/config';
+import { slangService } from '@/services/slangService';
 
 /**
  * Структура ответа от Qwen AI анализа
@@ -38,7 +38,8 @@ export class AnalysisService {
     const seriesInfo = seriesName ? ` из сериала "${seriesName}"` : '';
     const messages: OpenRouterMessage[] = [
       { role: 'system', content: getOpenRouterService().generateSystemPrompt('translation') },
-      { role: 'user', content: `Проанализируй эту фразу${seriesInfo}: "${context.text}". Контекст: предыдущая фраза "${context.prev}", следующая "${context.next}".
+      {
+        role: 'user', content: `Проанализируй эту фразу${seriesInfo}: "${context.text}". Контекст: предыдущая фраза "${context.prev}", следующая "${context.next}".
 
 Дай подробный разбор грамматики: объясни каждое правило, почему именно оно используется здесь. Особое внимание удели сложным конструкциям. Ответь на русском языке.` }
     ];
@@ -127,8 +128,6 @@ export class AnalysisService {
 
     // Добавляем сленг из Urban Dictionary (используем slang термины из AI ответа)
     guide.slang = await this.enrichWithSlangFromAI({ slang: analysis.slang });
-
-    console.log('guide', guide, 'analysis', analysis);
 
     this.sentenceCache.set(cacheKey, guide);
     return guide;

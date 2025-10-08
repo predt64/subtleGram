@@ -15,12 +15,21 @@ export const useSubtitleStore = defineStore('subtitle', () => {
   const filename = ref<string>('')
   const searchQuery = ref<string>('')
 
+  // Множество проанализированных субтитров (по тексту)
+  const analyzedSubtitles = ref<Set<string>>(new Set())
+
+  // Флаг загрузки данных из sessionStorage
+  // Начинаем с true всегда - показываем loading пока не загрузим данные
+  const isLoading = ref(true)
+
   /**
    * Инициализация sessionStorage только на клиенте
    * VueUse useStorage работает только в браузере, поэтому инициализируем после монтирования
    */
   onMounted(() => {
     if (typeof window !== 'undefined') {
+      // Проверяем, есть ли сохраненные данные
+      const hasStoredData = sessionStorage.getItem('rawSubtitles') !== null
       const rawSubtitlesStorage = useStorage<SubtitleFile[]>(
         'rawSubtitles',
         [],
@@ -52,9 +61,29 @@ export const useSubtitleStore = defineStore('subtitle', () => {
         }
       )
 
+      // Storage для проанализированных субтитров
+      const analyzedSubtitlesStorage = useStorage<string[]>(
+        'analyzedSubtitles',
+        [],
+        sessionStorage,
+        {
+          serializer: {
+            read: (v: string) => {
+              try {
+                return v ? JSON.parse(v) : []
+              } catch {
+                return []
+              }
+            },
+            write: (v: string[]) => JSON.stringify(v)
+          }
+        }
+      )
+
       // Восстанавливаем сохраненные данные
       rawSubtitles.value = rawSubtitlesStorage.value
       filename.value = filenameStorage.value
+      analyzedSubtitles.value = new Set(analyzedSubtitlesStorage.value)
 
       // Автоматически сохраняем изменения сырых субтитров
       watch(rawSubtitles, (newValue) => {
@@ -64,6 +93,16 @@ export const useSubtitleStore = defineStore('subtitle', () => {
       // Автоматически сохраняем изменения имени файла
       watch(filename, (newValue) => {
         filenameStorage.value = newValue
+      })
+
+      // Автоматически сохраняем изменения проанализированных субтитров
+      watch(analyzedSubtitles, (newValue) => {
+        analyzedSubtitlesStorage.value = Array.from(newValue)
+      }, { deep: true })
+
+      // Отмечаем завершение загрузки данных
+      nextTick(() => {
+        isLoading.value = false
       })
     }
   })
@@ -120,12 +159,21 @@ export const useSubtitleStore = defineStore('subtitle', () => {
   }
 
   /**
+   * Отмечает субтитр как проанализированный
+   * @param subtitleText - текст субтитра для отметки
+   */
+  const markAsAnalyzed = (subtitleText: string) => {
+    analyzedSubtitles.value.add(subtitleText)
+  }
+
+  /**
    * Очищает все данные субтитров и сбрасывает состояние
    */
   const clear = () => {
     rawSubtitles.value = []
     filename.value = ''
     searchQuery.value = ''
+    analyzedSubtitles.value.clear()
     // Сохранение происходит автоматически через watchers
   }
 
@@ -156,6 +204,8 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     sentenceCards,
     filename,
     searchQuery,
+    analyzedSubtitles,
+    isLoading,
 
     // Геттеры
     hasSubtitles,
@@ -165,6 +215,7 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     // Действия
     setSubtitles,
     setSearchQuery,
+    markAsAnalyzed,
     clear,
     findFilteredIndex,
   }
