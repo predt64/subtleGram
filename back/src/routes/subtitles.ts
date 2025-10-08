@@ -88,7 +88,7 @@ router.post('/upload', upload.single('file'), uploadController.uploadSubtitle);
 
 /**
  * POST /api/subtitles/analyze
- * Анализ содержимого субтитров с помощью Qwen AI
+ * Анализ содержимого субтитров с помощью AI
  *
  * Принимает: JSON с массивом субтитров и типом анализа
  * Возвращает: детальный анализ (сложность, словарь, грамматика)

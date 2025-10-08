@@ -58,7 +58,7 @@ import { openRouterConfig, openRouterFallbackConfig, OpenRouterModelConfig } fro
  * Сервис для работы с OpenRouter API с поддержкой fallback моделей
  */
 export class OpenRouterService {
-  constructor(private config: OpenRouterModelConfig = openRouterConfig) {}
+  constructor(private config: OpenRouterModelConfig = openRouterConfig) { }
 
   /**
    * Выполняет чат-запрос с поддержкой fallback моделей
@@ -216,7 +216,7 @@ export class OpenRouterService {
   - Начинай ответ непосредственно с {
   - Заканчивай ответ непосредственно на }
   - Никаких <think>, "Конечно" или других слов`;
-  
+
     switch (type) {
       case 'translation':
         return `${basePrompt}

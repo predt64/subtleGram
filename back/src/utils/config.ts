@@ -2,7 +2,7 @@
  * Конфигурация приложения для анализа субтитров на базе OpenRouter
  *
  * Предоставляет централизованную конфигурацию для:
- * - Модели OpenRouter (mistral/GPT) и параметров API
+ * - Модели OpenRouter (автоматический выбор оптимальных) и параметров API
  * - Загрузки файлов субтитров
  * - Ограничения частоты запросов
  * - Настроек сервера и окружения
@@ -22,9 +22,6 @@ export interface OpenRouterModelConfig {
   /** Базовый URL для API запросов */
   baseUrl: string;
 }
-
-/** Устаревший интерфейс для обратной совместимости */
-export interface QwenModelConfig extends OpenRouterModelConfig {}
 
 export interface FileUploadConfig {
   /** Максимальный размер файла в байтах */
@@ -90,15 +87,13 @@ export const openRouterFallbackConfig: OpenRouterModelConfig = {
   baseUrl: 'https://openrouter.ai/api/v1/chat/completions'
 };
 
-/** Устаревший экспорт для обратной совместимости */
-export const qwenConfig: QwenModelConfig = openRouterConfig;
 
 /**
  * Конфигурации для анализа субтитров
  */
 export const analysisConfigs = {
   translation: {
-    ...qwenConfig,
+    ...openRouterConfig,
     temperature: 0.4, // Умеренная температура для качественных переводов
     maxTokens: 2000
   }
@@ -253,8 +248,8 @@ export function getCurrentModelInfo() {
   return {
     primary: {
       name: 'mistralai/mistral-small-3.2-24b-instruct:free',
-      provider: 'Qwen',
-      description: 'Основная бесплатная модель Qwen с высоким качеством анализа'
+      provider: 'Mistral',
+      description: 'Основная бесплатная модель Mistral с высоким качеством анализа'
     },
     fallback: {
       name: 'openai/gpt-oss-20b:free',

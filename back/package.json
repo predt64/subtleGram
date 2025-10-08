@@ -5,18 +5,12 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
-    "build": "tsc",
+    "build": "npm run type-check && tsc",
     "start": "node dist/index.js",
-    "clean": "rm -rf dist",
-    "check-token": "ts-node check-hf-token.ts",
-    "test-models": "ts-node test-models-comprehensive.ts",
-    "quick-test": "ts-node quick-test-models.ts",
     "test-integration": "ts-node test-integration.ts",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts",
-    "type-check": "tsc --noEmit"
+    "test-ud": "ts-node test-ud-api.ts",
+    "type-check": "tsc --noEmit",
+    "prepare": "npm run build"
   },
   "keywords": [
     "subtitles",

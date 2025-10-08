@@ -27,7 +27,7 @@ interface AnalyzeRequestBody {
  */
 export const analyzeController = {
   /**
-   * Анализ субтитров с помощью Qwen AI
+   * Анализ субтитров с помощью AI
    * POST /api/subtitles/analyze
    *
    * Процесс:
@@ -68,7 +68,7 @@ export const analyzeController = {
 
       /**
        * ВЫПОЛНЕНИЕ АНАЛИЗА
-       * Вызываем сервис анализа с использованием Qwen AI
+       * Вызываем сервис анализа с использованием AI
        */
       const analysisResult = await analysisService.createTranslationGuide({
         sentenceText,
@@ -96,7 +96,7 @@ export const analyzeController = {
        */
       res.status(200).json({
         success: true,
-        message: 'Анализ с помощью Qwen завершен успешно',
+        message: 'Анализ с помощью AI завершен успешно',
         data: {
           analysis: analysisResult,        // Результаты анализа
           metadata: {
@@ -150,7 +150,7 @@ export const analyzeController = {
         if (error.message.includes('503') || error.message.includes('unavailable')) {
           res.status(503).json({
             error: 'Сервис временно недоступен',
-            message: 'Служба Qwen AI сейчас занята. Попробуйте позже.',
+            message: 'Служба AI сейчас занята. Попробуйте позже.',
           });
           return;
         }
