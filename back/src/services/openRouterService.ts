@@ -1,45 +1,3 @@
-/**
- * Сообщение для OpenRouter API
- * Соответствует формату OpenAI Chat Completions API
- */
-export interface OpenRouterMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-/**
- * Ответ от OpenRouter API
- * Структура соответствует Chat Completions API
- */
-export interface OpenRouterResponse {
-  id: string;
-  choices: Array<{
-    message: {
-      content: string;
-      role: string;
-    };
-    finish_reason: string;
-    index: number;
-  }>;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-  model: string;
-}
-
-/**
- * Конфигурация для запросов к OpenRouter API
- * Параметры влияют на поведение AI модели
- */
-export interface OpenRouterConfig {
-  model: string;        // Название модели OpenRouter
-  temperature: number;  // Креативность ответа (0.0 - 1.0)
-  maxTokens: number;    // Максимальное количество токенов в ответе
-  timeout: number;      // Таймаут запроса в миллисекундах
-  maxRetries: number;   // Максимальное количество попыток при ошибках
-}
 
 /**
  * Низкоуровневый сервис для взаимодействия с OpenRouter API
@@ -51,8 +9,10 @@ export interface OpenRouterConfig {
  * - Генерацию системных промптов
  * - Fallback логику между моделями
  */
+import { OpenRouterMessage, OpenRouterResponse, OpenRouterConfig } from '../types/openRouterTypes';
 import { getAppConfig } from '../utils/config';
 import { openRouterConfig, openRouterFallbackConfig, OpenRouterModelConfig } from '../utils/config';
+import { basePrompt, translationPrompt } from './prompts';
 
 /**
  * Сервис для работы с OpenRouter API с поддержкой fallback моделей
@@ -94,6 +54,8 @@ export class OpenRouterService {
     modelConfig: OpenRouterModelConfig,
     options: Partial<OpenRouterConfig> = {}
   ): Promise<OpenRouterResponse> {
+    const startTime = Date.now();
+
     // Объединяем конфигурацию по умолчанию с опциями пользователя
     const config = { ...modelConfig, ...options };
     let lastError: Error | null = null;
@@ -117,6 +79,10 @@ export class OpenRouterService {
           throw new Error('OpenRouter API вернул пустой ответ');
         }
 
+        // Логируем успешное выполнение с метриками
+        const duration = Date.now() - startTime;
+        console.log(`OpenRouter API call completed successfully in ${duration}ms, model: ${config.model}, tokens: ${response.usage?.total_tokens || 'unknown'}`);
+
         return response;
 
       } catch (error) {
@@ -128,12 +94,16 @@ export class OpenRouterService {
           break;
         }
 
-        // Ждем перед следующей попыткой (exponential backoff: 1s, 2s, 4s...)
-        await this.delay(Math.pow(2, attempt) * 1000);
+        // Ждем перед следующей попыткой с jitter для предотвращения одновременных запросов
+        const baseDelay = config.retryDelayMs * Math.pow(2, attempt);
+        const jitter = Math.random() * config.retryJitterMs;
+        await this.delay(baseDelay + jitter);
       }
     }
 
-    // Если все попытки исчерпаны, выбрасываем финальную ошибку
+    // Если все попытки исчерпаны, логируем и выбрасываем финальную ошибку
+    const totalDuration = Date.now() - startTime;
+    console.error(`❌ OpenRouter API (${config.model}) failed after ${config.maxRetries} attempts in ${totalDuration}ms: ${lastError?.message}`);
     throw new Error(`OpenRouter API (${config.model}) failed after ${config.maxRetries} attempts: ${lastError?.message}`);
   }
 
@@ -199,107 +169,12 @@ export class OpenRouterService {
   }
 
   /**
-   * Генерирует системный промпт для разных типов анализа субтитров
+   * Генерирует системный промпт для анализа перевода субтитров
+   * @param type - тип анализа (пока поддерживается только 'translation')
+   * @returns полный системный промпт для AI
    */
-  generateSystemPrompt(type: 'translation' | 'difficulty' | 'vocabulary' | 'grammar' | 'comprehensive' | 'topics'): string {
-    const basePrompt = `Ты - ИИ для анализа английских субтитров. Твоя задача - анализировать фразы и возвращать результат строго в формате JSON.
-  
-  ВАЖНЫЕ ПРАВИЛА:
-  1. Анализируй только предоставленный текст.
-  2. Игнорируй артефакты субтитров (многоточия, тире, HTML-теги).
-  3. Будь точным и конкретным.
-  4. ВСЕГДА отвечай ТОЛЬКО валидным JSON без дополнительного текста.
-  5. НИКОГДА не добавляй объяснения или комментарии вне JSON.
-  6. Если текст пустой или слишком короткий (менее 3 слов), верни минимальный JSON с "text": оригинал, пустыми массивами и "cefr": "A1".
-  
-  СТРОГИЙ ФОРМАТ ОТВЕТА:
-  - Начинай ответ непосредственно с {
-  - Заканчивай ответ непосредственно на }
-  - Никаких <think>, "Конечно" или других слов`;
-
-    switch (type) {
-      case 'translation':
-        return `${basePrompt}
-  
-  ПРАВИЛА АНАЛИЗА:
-  1. УРОВЕНЬ СЛОЖНОСТИ: Выбери один уровень CEFR на основе грамматики и словаря:
-     - A1: Базовые фразы, простые времена.
-     - A2: Простые предложения, повседневный словарь.
-     - B1: Средние конструкции (условные, пассив).
-     - B2: Сложные времена, модальные, фразовые глаголы.
-     - C1: Идиомы, нюансы, сложная структура.
-     - C2: Абстрактные, идиоматические выражения.
-  2. ГРАММАТИЧЕСКИЕ ОСОБЕННОСТИ: Найди 2-5 ключевых правил ИЗ ЭТОГО СПИСКА:
-     - Verb Tenses: Present Simple/Continuous, Past Simple/Continuous, Future Simple/Continuous, Present/Past/Future Perfect/Continuous.
-     - Passive Voice.
-     - Modal Verbs: Can, Must, Should, May, Might, Would, Could, Have to.
-     - Imperative.
-     - Conditionals: First/Second/Third, Wish, If clauses.
-     - Subjunctive Mood.
-     - Reported Speech.
-     - Articles: a/an/the.
-     - Pronouns: personal, possessive, reflexive, relative.
-     - Quantifiers: some/any, much/many, few/little.
-     - Adjectives/Adverbs: comparative, superlative, frequency.
-     - Prepositions, Conjunctions.
-     - Questions: tag, wh-questions.
-     - Sentence Structure, Word Order.
-     - Gerund, Infinitive, Participles.
-     - Other: Stative Verbs, Irregular Verbs, Phrasal Verbs.
-     КАЖДОЕ правило должно иметь:
-     - "rule": название из списка (max 30 символов).
-     - "russian": перевод на русский (max 30 символов).
-  3. ПЕРЕВОДЫ: Создай 2 варианта:
-     - "natural": естественный разговорный перевод.
-     - "literal": дословный перевод.
-  4. ОБЪЯСНЕНИЕ: Краткое объяснение (max 300 символов) грамматики и перевода, как школьнику. Ссылайся на части фразы, объясни каждое правило из features, приведи 1-2 примера альтернативы если уместно. Избегай общих фраз.
-  5. СЛЕНГ: Массив английских слов/выражений, которые являются сленгом (пустой, если нет).
-  
-  СТРОГИЕ ТРЕБОВАНИЯ:
-  - Используй ТОЛЬКО правила из списка; если нет точного, выбери ближайшее.
-  - НЕ используй одинарные кавычки в explanation.
-  - НЕ используй тире (–), используй дефис (-).
-  - Массивы features и translations НЕ пустые; slang может быть пустым.
-  - Значение "cefr" - одна из: A1, A2, B1, B2, C1, C2.
-  
-  ОБЯЗАТЕЛЬНО верни ТОЛЬКО этот JSON:
-  
-  {
-    "text": "If I were you, I'd stay home.",
-    "difficulty": {
-      "cefr": "B1"
-    },
-    "features": [
-      {
-        "rule": "Conditionals",
-        "russian": "Условные предложения"
-      },
-      {
-        "rule": "Subjunctive Mood",
-        "russian": "Сослагательное наклонение"
-      },
-      {
-        "rule": "Modal Verbs",
-        "russian": "Модальные глаголы"
-      }
-    ],
-    "translations": [
-      {
-        "style": "natural",
-        "text": "Если бы я был на твоем месте, я бы остался дома."
-      },
-      {
-        "style": "literal",
-        "text": "Если я был тобой, я остался бы дома."
-      }
-    ],
-    "explanation": "Фраза использует второе условное предложение (Conditionals) для нереальной ситуации: If I were you (Subjunctive Mood, were для всех, даже I). I'd stay home - модальный глагол would (Modal Verbs) + глагол. Альтернатива: If I was you (менее формально). Дословный перевод показывает разницу в идиоме.",
-    "slang": []
-  }`;
-
-      default:
-        return basePrompt;
-    }
+  generateSystemPrompt(): string {
+    return `${basePrompt}${translationPrompt}`;
   }
 
   /**

@@ -40,7 +40,7 @@
             v-if="analysisState === 'success' && analysisData"
             class="bg-blue-500/20 px-3 py-1 rounded-full font-medium text-blue-300 text-sm"
           >
-            {{ analysisData.analysis.segments?.[0]?.difficulty?.cefr || "B1" }}
+            {{ analysisData.analysis.cefr || "B1" }}
           </div>
         </div>
 
@@ -114,7 +114,7 @@
               </div>
               <p class="text-white leading-relaxed">
                 {{
-                  analysisData.analysis.translations?.[0]?.variants?.find(
+                  analysisData.analysis.translations?.find(
                     (v) => v.style === "natural"
                   )?.text || "Перевод недоступен"
                 }}
@@ -128,7 +128,7 @@
               <div class="space-y-2 text-sm">
                 <div class="flex items-center gap-2">
                   <span class="text-slate-300">{{
-                    analysisData.analysis.translations?.[0]?.variants?.find(
+                    analysisData.analysis.translations?.find(
                       (v) => v.style === "literal"
                     )?.text || "Перевод недоступен"
                   }}</span>
@@ -150,8 +150,7 @@
               </h4>
               <ul class="space-y-2 text-slate-300 text-sm">
                 <li
-                  v-for="feature in analysisData.analysis.segments?.[0]
-                    ?.features"
+                  v-for="feature in analysisData.analysis.features"
                   :key="feature.rule"
                   class="flex items-center gap-2"
                 >
@@ -170,7 +169,7 @@
               </h4>
               <p class="text-slate-300 text-sm leading-relaxed">
                 {{
-                  analysisData.analysis.translations?.[0]?.explanation ||
+                  analysisData.analysis.explanation ||
                   "Объяснение недоступно"
                 }}
               </p>

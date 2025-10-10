@@ -1,22 +1,3 @@
-/**
- * Типы API ответов
- */
-
-/**
- * Стандартный ответ API
- * Используется для всех HTTP ответов приложения
- */
-export interface ApiResponse<T = any> {
-  success: boolean;     // Успешность операции
-  message: string;      // Сообщение пользователю
-  data?: T;            // Данные ответа (опционально)
-  errors?: any;        // Ошибки (опционально)
-  timestamp?: string;  // Временная метка (в режиме разработки)
-}
-
-/**
- * Типы субтитров
- */
 
 /**
  * Отдельная запись субтитра
@@ -30,21 +11,6 @@ export interface SubtitleEntry {
 }
 
 /**
- * Ответ с разобранными субтитрами
- * Возвращается после успешного парсинга файла субтитров
- */
-export interface ParsedSubtitlesResponse {
-  filename: string;           // Имя загруженного файла
-  subtitlesCount: number;     // Общее количество субтитров
-  subtitles: SubtitleEntry[]; // Массив всех субтитров
-}
-
-
-/**
- * Типы загрузки файлов
- */
-
-/**
  * Загруженный файл через Multer
  * Представляет файл, полученный через multipart/form-data
  */
@@ -56,29 +22,6 @@ export interface UploadedFile {
   buffer: Buffer;       // Содержимое файла в памяти
   size: number;         // Размер файла в байтах
 }
-
-/**
- * Типы конфигурации окружения
- */
-
-/**
- * Конфигурация переменных окружения
- * Определяет все доступные переменные среды
- */
-export interface EnvironmentConfig {
-  PORT: number;                    // Порт сервера
-  NODE_ENV: 'development' | 'production' | 'test'; // Окружение Node.js
-  OPENROUTER_API_KEY: string;     // Токен OpenRouter API
-  MAX_FILE_SIZE: number;          // Максимальный размер файла
-  UPLOAD_DIR: string;             // Директория для загрузок
-  FRONTEND_URL: string;           // URL фронтенд приложения
-  LOG_LEVEL: string;              // Уровень логирования
-}
-
-/**
- * Типы ошибок
- */
-
 /**
  * Кастомная ошибка приложения
  * Расширяет стандартную Error дополнительными полями
@@ -88,15 +31,6 @@ export interface AppError {
   statusCode: number;   // HTTP статус код
   isOperational: boolean; // Операционная ошибка (не программная)
 }
-
-/**
- * Типы сервисов
- */
-
-
-/**
- * Типы валидации
- */
 
 /**
  * Результат валидации данных
@@ -109,29 +43,6 @@ export interface ValidationResult {
 }
 
 /**
- * Типы проверки здоровья системы
- */
-
-/**
- * Ответ health check эндпоинта
- * Показывает статус всех компонентов системы
- */
-export interface HealthCheckResponse {
-  status: string;     // Статус системы ("OK", "ERROR", etc.)
-  timestamp: string;  // Время проверки
-  environment: string; // Текущее окружение
-  services?: {        // Статус отдельных сервисов
-    database?: boolean;   // Статус базы данных
-    ai?: boolean;         // Статус AI сервисов
-    fileSystem?: boolean; // Статус файловой системы
-  };
-}
-
-/**
- * Типы ограничения частоты запросов
- */
-
-/**
  * Конфигурация rate limiting
  * Параметры для защиты от перегрузки API
  */
@@ -140,119 +51,9 @@ export interface RateLimitConfig {
   max: number;           // Максимум запросов в окне
   message: string;       // Сообщение при превышении лимита
   standardHeaders: boolean; // Добавлять стандартные заголовки
-  legacyHeaders: false;  // Добавлять устаревшие заголовки
+  legacyHeaders: boolean; // Добавлять устаревшие заголовки
 }
 
-/**
- * Типы CORS настроек
- */
-
-/**
- * Конфигурация Cross-Origin Resource Sharing
- * Параметры для настройки CORS политики
- */
-export interface CORSConfig {
-  origin: string | string[]; // Разрешенные источники
-  methods: string[];         // Разрешенные HTTP методы
-  allowedHeaders: string[];  // Разрешенные заголовки
-  credentials: boolean;      // Разрешать credentials
-}
-
-/**
- * Типы логирования
- */
-
-/**
- * Запись в логе приложения
- * Структурированная запись для системы логирования
- */
-export interface LogEntry {
-  level: 'error' | 'warn' | 'info' | 'debug'; // Уровень важности
-  message: string;        // Сообщение лога
-  timestamp: string;      // Время записи
-  service: string;        // Название сервиса/модуля
-  userId?: string;        // ID пользователя (опционально)
-  requestId?: string;     // ID запроса для трассировки
-  metadata?: Record<string, any>; // Дополнительные данные
-}
-
-/**
- * Типы пагинации
- */
-
-/**
- * Параметры пагинации для запросов со списками
- * Используется для постраничной загрузки данных
- */
-export interface PaginationParams {
-  page: number;           // Номер страницы (начиная с 1)
-  limit: number;          // Количество элементов на странице
-  sort?: string;          // Поле для сортировки
-  order?: 'asc' | 'desc'; // Порядок сортировки
-}
-
-/**
- * Ответ с пагинированными данными
- * Расширяет стандартный ApiResponse информацией о пагинации
- */
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-  pagination: {
-    page: number;     // Текущая страница
-    limit: number;    // Элементов на странице
-    total: number;    // Общее количество элементов
-    pages: number;    // Общее количество страниц
-    hasNext: boolean; // Есть ли следующая страница
-    hasPrev: boolean; // Есть ли предыдущая страница
-  };
-}
-
-/**
- * Типы middleware
- */
-
-/**
- * Асинхронный обработчик Express запросов
- * Для middleware функций, которые могут содержать await
- */
-export type AsyncRequestHandler = (
-  req: import('express').Request,
-  res: import('express').Response,
-  next: import('express').NextFunction
-) => Promise<void>;
-
-/**
- * Синхронный обработчик Express запросов
- * Для обычных middleware функций без асинхронности
- */
-export type RequestHandler = (
-  req: import('express').Request,
-  res: import('express').Response,
-  next: import('express').NextFunction
-) => void;
-
-/**
- * Утилитарные типы TypeScript
- */
-
-/**
- * Делает указанные поля интерфейса опциональными
- * Остальные поля остаются обязательными
- */
-export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-
-/**
- * Делает указанные поля интерфейса обязательными
- * Остальные поля могут быть опциональными
- */
-export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
-
-/**
- * Рекурсивно делает все поля интерфейса опциональными
- * Включая вложенные объекты и массивы
- */
-export type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
 
 /**
  * Сегмент перевода - логический фрагмент для перевода
@@ -289,13 +90,49 @@ export interface SlangCard {
 }
 
 /**
- * Полный гид перевода для клика
+ * Интерфейс перевода предложения
  */
 export interface TranslationGuide {
-  segments: TranslationSegment[]; // Сегменты для перевода
-  translations: {                // Переводы по сегментам
+  segment: TranslationSegment;    // Сегмент для перевода
+  translations: {                 // Варианты перевода и объяснение
     variants: TranslationVariant[];
     explanation: string;          // Объяснение грамматики и перевода
-  }[];
-  slang: SlangCard[];            // Карточки сленга
+  };
+  slang: SlangCard[];             // Карточки сленга
 }
+
+/**
+ * Базовая структура анализа текста (общие поля)
+ */
+interface BaseAnalysis {
+  text: string;                   // анализируемый текст
+  cefr: string;                   // уровень сложности (A1, A2, B1, B2, C1, C2)
+  features: GrammarFeature[];     // грамматические особенности
+  translations: TranslationVariant[]; // варианты перевода
+  explanation: string;            // объяснение грамматики и перевода
+}
+
+/**
+ * Ответ ИИ на анализ предложения (сырые данные)
+ */
+export interface AIAnalysisResponse extends BaseAnalysis {
+  slang: string[];                // термины сленга для дальнейшего обогащения
+}
+
+/**
+ * Результат анализа текста (готовый для фронтенда)
+ */
+export interface AnalysisResult extends BaseAnalysis {
+  slang: SlangCard[];             // готовые карточки сленга
+}
+
+/**
+ * Грамматическая особенность (псевдоним для лучшей читаемости)
+ */
+export type GrammarFeature = {
+  rule: string;                   // название правила на английском
+  russian: string;                // название правила на русском
+};
+
+// Ре-экспорт типов OpenRouter для удобства импорта
+export * from './openRouterTypes';

@@ -48,7 +48,7 @@
               class="flex justify-center items-center bg-slate-700/50 mx-auto rounded-full w-24 h-24"
             >
               <svg
-                class="w-12 h-12 text-blue-400 animate-spin"
+                class="w-12 h-12 text-blue-400 animate-spin-reverse"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -350,5 +350,19 @@ const dropZoneText = computed(() => {
 
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* Анимация вращения по часовой стрелке */
+.animate-spin-reverse {
+  animation: spin-reverse 1s linear infinite;
+}
+
+@keyframes spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
 }
 </style>

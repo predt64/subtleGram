@@ -8,6 +8,17 @@ import { analysisService } from '../services/analysisService';
 import { getCurrentModelInfo } from '../utils/config';
 
 /**
+ * Константы для проверки типов ошибок
+ */
+const ERROR_PATTERNS = {
+  AUTHENTICATION: ['API token', '401'],
+  RATE_LIMIT: ['rate limit', '429'],
+  TIMEOUT: ['timeout', 'AbortError'],
+  SERVICE_UNAVAILABLE: ['503', 'unavailable'],
+  INVALID_RESPONSE: ['Invalid JSON', 'parseStructuredResponse']
+} as const;
+
+/**
  * Структура тела запроса на анализ субтитров
  */
 interface AnalyzeRequestBody {
@@ -20,6 +31,126 @@ interface AnalyzeRequestBody {
   };
   /** Название сериала для контекста */
   seriesName?: string;
+}
+
+/**
+ * Формирует успешный ответ с результатами анализа
+ */
+function sendAnalysisSuccess(res: Response, analysisResult: any, processingTime: number): void {
+  res.status(200).json({
+    success: true,
+    message: 'Анализ с помощью AI завершен успешно',
+    data: {
+      analysis: analysisResult,
+      metadata: {
+        processingTimeMs: processingTime,
+        timestamp: new Date().toISOString(),
+        model: getCurrentModelInfo().displayName
+      }
+    },
+  });
+}
+
+/**
+ * Обрабатывает ошибки анализа и возвращает соответствующий HTTP ответ
+ */
+function handleAnalysisError(res: Response, error: unknown, processingTime: number): void {
+  if (!(error instanceof Error)) {
+    res.status(500).json({
+      error: 'Внутренняя ошибка сервера',
+      message: 'Произошла непредвиденная ошибка во время анализа',
+      processingTimeMs: processingTime,
+    });
+    return;
+  }
+
+  // Ошибки аутентификации (неверный токен)
+  if (ERROR_PATTERNS.AUTHENTICATION.some(pattern => error.message.includes(pattern))) {
+    res.status(401).json({
+      error: 'Ошибка аутентификации',
+      message: 'Неверный или отсутствующий токен OpenRouter',
+      details: error.message,
+    });
+    return;
+  }
+
+  // Превышение лимита запросов
+  if (ERROR_PATTERNS.RATE_LIMIT.some(pattern => error.message.includes(pattern))) {
+    res.status(429).json({
+      error: 'Превышен лимит запросов',
+      message: 'Слишком много запросов. Подождите перед повторной попыткой.',
+      retryAfter: 60,
+    });
+    return;
+  }
+
+  // Таймаут запроса
+  if (ERROR_PATTERNS.TIMEOUT.some(pattern => error.message.includes(pattern))) {
+    res.status(408).json({
+      error: 'Таймаут запроса',
+      message: 'Анализ занял слишком много времени. Попробуйте с меньшим количеством субтитров.',
+    });
+    return;
+  }
+
+  // Сервис временно недоступен
+  if (ERROR_PATTERNS.SERVICE_UNAVAILABLE.some(pattern => error.message.includes(pattern))) {
+    res.status(503).json({
+      error: 'Сервис временно недоступен',
+      message: 'Служба AI сейчас занята. Попробуйте позже.',
+    });
+    return;
+  }
+
+  // Ошибки парсинга JSON от AI
+  if (ERROR_PATTERNS.INVALID_RESPONSE.some(pattern => error.message.includes(pattern))) {
+    res.status(502).json({
+      error: 'Ошибка ответа AI',
+      message: 'Получен некорректный ответ от службы AI. Попробуйте еще раз.',
+    });
+    return;
+  }
+
+  // Общие ошибки анализа
+  res.status(400).json({
+    error: 'Анализ не удался',
+    message: error.message,
+    processingTimeMs: processingTime,
+  });
+}
+
+/**
+ * Извлекает и валидирует параметры анализа из запроса
+ */
+function extractAndValidateRequest(req: Request): AnalyzeRequestBody {
+  const { sentenceText, context, seriesName } = req.body as AnalyzeRequestBody;
+
+  if (!sentenceText) {
+    throw new Error('sentenceText (текст предложения) обязательна');
+  }
+
+  return { sentenceText, context, seriesName } as AnalyzeRequestBody;
+}
+
+/**
+ * Настраивает обработку отмены запроса клиентом
+ */
+function setupCancellationHandling(req: Request): () => boolean {
+  let requestCancelled = false;
+
+  const onRequestClose = () => {
+    requestCancelled = true;
+    console.log('Analysis request cancelled by client');
+  };
+
+  req.on('close', onRequestClose);
+  req.on('aborted', onRequestClose);
+
+  return () => {
+    req.removeListener('close', onRequestClose);
+    req.removeListener('aborted', onRequestClose);
+    return requestCancelled;
+  };
 }
 
 /**
@@ -37,148 +168,40 @@ export const analyzeController = {
    * 4. Обработка ошибок
    */
   analyzeSubtitles: async (req: Request, res: Response): Promise<void> => {
-    // Засекаем время начала обработки для метрик
     const startTime = Date.now();
 
     try {
-      // Извлекаем параметры анализа
-      const { sentenceText, context, seriesName } = req.body as AnalyzeRequestBody;
+      const requestData = extractAndValidateRequest(req);
+      const checkCancelled = setupCancellationHandling(req);
 
-      // Проверяем, что предоставлен текст предложения
-      if (!sentenceText) {
-        res.status(400).json({
-          success: false,
-          message: 'sentenceText (текст предложения) обязательна'
-        });
+      const analysisResult = await analysisService.createTranslationGuide({
+        sentenceText: requestData.sentenceText,
+        ...(requestData.context && { context: requestData.context }),
+        ...(requestData.seriesName && { seriesName: requestData.seriesName })
+      });
+
+      const requestCancelled = checkCancelled();
+      if (requestCancelled) {
         return;
       }
 
-      // Флаг для отслеживания отмены запроса
-      let requestCancelled = false;
-
-      // Обработчик отмены запроса клиентом
-      const onRequestClose = () => {
-        requestCancelled = true;
-        console.log('Analysis request cancelled by client');
-      };
-
-      // Слушаем событие закрытия соединения
-      req.on('close', onRequestClose);
-      req.on('aborted', onRequestClose);
-
-      /**
-       * ВЫПОЛНЕНИЕ АНАЛИЗА
-       * Вызываем сервис анализа с использованием AI
-       */
-      const analysisResult = await analysisService.createTranslationGuide({
-        sentenceText,
-        ...(context && { context }),
-        ...(seriesName && { seriesName })
-      });
-
-      // Убираем слушатели событий
-      req.removeListener('close', onRequestClose);
-      req.removeListener('aborted', onRequestClose);
-
-      // Проверяем, был ли запрос отменен клиентом
-      if (requestCancelled) {
-        console.log('Request was cancelled, not sending response');
-        return; // Не отправляем ответ
-      }
-
-      // Вычисляем время обработки
       const processingTime = Date.now() - startTime;
       console.log(`Анализ завершен за ${processingTime}мс`);
-
-      /**
-       * ФОРМИРОВАНИЕ ОТВЕТА
-       * Возвращаем результаты анализа с метаданными
-       */
-      res.status(200).json({
-        success: true,
-        message: 'Анализ с помощью AI завершен успешно',
-        data: {
-          analysis: analysisResult,        // Результаты анализа
-          metadata: {
-            processingTimeMs: processingTime,    // Время обработки
-            timestamp: new Date().toISOString(), // Время завершения
-            model: getCurrentModelInfo().displayName // Используемая модель
-          }
-        },
-      });
+      sendAnalysisSuccess(res, analysisResult, processingTime);
 
     } catch (error) {
-      // Вычисляем время обработки даже при ошибке
       const processingTime = Date.now() - startTime;
       console.error('Ошибка анализа после', processingTime, 'мс:', error);
 
-      /**
-       * ОБРАБОТКА ОШИБОК
-       * Разные типы ошибок требуют разных HTTP статусов и сообщений
-       */
-      if (error instanceof Error) {
-        // Ошибки аутентификации (неверный токен)
-        if (error.message.includes('API token') || error.message.includes('401')) {
-          res.status(401).json({
-            error: 'Ошибка аутентификации',
-            message: 'Неверный или отсутствующий токен OpenRouter',
-            details: error.message,
-          });
-          return;
-        }
-
-        // Превышение лимита запросов
-        if (error.message.includes('rate limit') || error.message.includes('429')) {
-          res.status(429).json({
-            error: 'Превышен лимит запросов',
-            message: 'Слишком много запросов. Подождите перед повторной попыткой.',
-            retryAfter: 60, // секунд до следующего запроса
-          });
-          return;
-        }
-
-        // Таймаут запроса
-        if (error.message.includes('timeout') || error.message.includes('AbortError')) {
-          res.status(408).json({
-            error: 'Таймаут запроса',
-            message: 'Анализ занял слишком много времени. Попробуйте с меньшим количеством субтитров.',
-          });
-          return;
-        }
-
-        // Сервис временно недоступен
-        if (error.message.includes('503') || error.message.includes('unavailable')) {
-          res.status(503).json({
-            error: 'Сервис временно недоступен',
-            message: 'Служба AI сейчас занята. Попробуйте позже.',
-          });
-          return;
-        }
-
-        // Ошибки парсинга JSON от AI
-        if (error.message.includes('Invalid JSON') || error.message.includes('parseStructuredResponse')) {
-          res.status(502).json({
-            error: 'Ошибка ответа AI',
-            message: 'Получен некорректный ответ от службы AI. Попробуйте еще раз.',
-          });
-          return;
-        }
-
-        // Общие ошибки анализа
+      if (error instanceof Error && error.message.includes('sentenceText')) {
         res.status(400).json({
-          error: 'Анализ не удался',
-          message: error.message,
-          processingTimeMs: processingTime,
+          success: false,
+          message: error.message
         });
         return;
       }
 
-      // Неизвестные ошибки - возвращаем 500
-      res.status(500).json({
-        error: 'Внутренняя ошибка сервера',
-        message: 'Произошла непредвиденная ошибка во время анализа',
-        processingTimeMs: processingTime,
-      });
+      handleAnalysisError(res, error, processingTime);
     }
   },
 };

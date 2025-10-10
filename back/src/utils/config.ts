@@ -21,6 +21,10 @@ export interface OpenRouterModelConfig {
   maxRetries: number;
   /** Базовый URL для API запросов */
   baseUrl: string;
+  /** Базовая задержка для retry (мс) */
+  retryDelayMs: number;
+  /** Случайная добавка к задержке для jitter (мс) */
+  retryJitterMs: number;
 }
 
 export interface FileUploadConfig {
@@ -32,6 +36,17 @@ export interface FileUploadConfig {
   allowedExtensions: string[];
   /** Разрешенные MIME типы */
   allowedMimeTypes: string[];
+}
+
+export interface SlangConfig {
+  /** Время жизни кеша в миллисекундах */
+  cacheTTL: number;
+  /** Максимальное количество результатов от API */
+  apiLimit: number;
+  /** Таймаут запроса в миллисекундах */
+  timeout: number;
+  /** Максимальное количество повторных попыток */
+  maxRetries: number;
 }
 
 export interface RateLimitConfig {
@@ -56,8 +71,6 @@ export interface AppConfig {
   frontendUrl: string;
   /** Токен OpenRouter API */
   openRouterToken: string;
-  /** Включить детальное логирование */
-  enableLogging: boolean;
   /** Таймаут запросов для всех сервисов */
   requestTimeout: number;
 }
@@ -74,7 +87,9 @@ export const openRouterConfig: OpenRouterModelConfig = {
   maxTokens: 2000,     // Достаточно для подробных анализов
   timeout: 30000,      // 30 секунд таймаут
   maxRetries: 3,       // 3 попытки при ошибках
-  baseUrl: 'https://openrouter.ai/api/v1/chat/completions'
+  baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+  retryDelayMs: 1000,  // Базовая задержка 1 секунда
+  retryJitterMs: 500   // Случайная добавка до 500мс
 };
 
 /** Конфигурация fallback модели */
@@ -84,7 +99,9 @@ export const openRouterFallbackConfig: OpenRouterModelConfig = {
   maxTokens: 2000,
   timeout: 30000,
   maxRetries: 2,       // Меньше попыток для fallback
-  baseUrl: 'https://openrouter.ai/api/v1/chat/completions'
+  baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+  retryDelayMs: 1000,  // Базовая задержка 1 секунда
+  retryJitterMs: 500   // Случайная добавка до 500мс
 };
 
 
@@ -119,6 +136,21 @@ export const fileUploadConfig: FileUploadConfig = {
 };
 
 /**
+ * Конфигурация сервиса сленга (Urban Dictionary)
+ *
+ * Параметры для оптимизации работы с внешним API:
+ * - Кеширование результатов на 1 час
+ * - Ограничение количества результатов для управляемости
+ * - Таймауты и повторные попытки для надежности
+ */
+export const slangConfig: SlangConfig = {
+  cacheTTL: 3600000,     // 1 час кеширования
+  apiLimit: 2,          // Максимум 2 результата от API
+  timeout: 10000,       // 10 секунд таймаут
+  maxRetries: 2         // 2 повторные попытки при ошибках
+};
+
+/**
  * Конфигурация ограничения частоты запросов (Rate Limiting)
  *
  * Защищает API от перегрузки и злоупотреблений:
@@ -145,7 +177,6 @@ export function loadAppConfig(): AppConfig {
     nodeEnv: (process.env['NODE_ENV'] as AppConfig['nodeEnv']) || 'development',
     frontendUrl: process.env['FRONTEND_URL'] || 'http://localhost:3000',
     openRouterToken: process.env['OPENROUTER_API_KEY'] || '',
-    enableLogging: process.env['NODE_ENV'] === 'development',
     requestTimeout: 30000
   };
 
@@ -200,43 +231,6 @@ export function validateConfig(config: AppConfig): void {
  */
 export function getAnalysisConfig(type: keyof typeof analysisConfigs) {
   return analysisConfigs[type];
-}
-
-/**
- * Конфигурации для разных окружений выполнения
- *
- * Оптимизированные настройки для каждого типа окружения:
- * - development: детальное логирование, длинные таймауты для отладки
- * - production: минимальное логирование, оптимальные таймауты
- * - test: минимальное логирование, короткие таймауты для быстрых тестов
- */
-export const envConfigs = {
-  development: {
-    enableDetailedLogs: true,    // Детальное логирование для разработки
-    enableCorsLogs: true,        // Логи CORS для отладки
-    requestTimeout: 60000        // Длинный таймаут для комфортной разработки
-  },
-  production: {
-    enableDetailedLogs: false,   // Минимальное логирование в продакшене
-    enableCorsLogs: false,       // Без CORS логов для производительности
-    requestTimeout: 30000        // Оптимальный таймаут для продакшена
-  },
-  test: {
-    enableDetailedLogs: false,   // Без детального логирования в тестах
-    enableCorsLogs: false,       // Без CORS логов в тестах
-    requestTimeout: 10000        // Короткий таймаут для быстрых тестов
-  }
-} as const;
-
-/**
- * Получает конфигурацию для текущего окружения
- *
- * Определяет окружение по переменной NODE_ENV и возвращает
- * соответствующие оптимизированные настройки
- */
-export function getEnvConfig() {
-  const nodeEnv = (process.env['NODE_ENV'] as keyof typeof envConfigs) || 'development';
-  return envConfigs[nodeEnv];
 }
 
 /**

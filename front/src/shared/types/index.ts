@@ -118,8 +118,11 @@ export interface SlangCard {
  * Результат анализа текста
  */
 export interface AnalysisResult {
-  segments: TranslationSegment[]
-  translations: TranslationData[]
+  text: string
+  cefr: string
+  features: GrammarFeature[]
+  translations: TranslationVariant[]
+  explanation: string
   slang: SlangCard[]
 }
 

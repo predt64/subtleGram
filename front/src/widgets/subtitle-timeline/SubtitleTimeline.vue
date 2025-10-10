@@ -312,9 +312,17 @@ const getSubtitleTextClasses = (index: number) => {
 
 /**
  * Вычисляет статус субтитра с полными данными
+ * @param filteredIndex - индекс в отфильтрованном массиве
  */
-const getSubtitleStatusData = (index: number) => {
-  const status = getSubtitleStatus(index);
+const getSubtitleStatusData = (filteredIndex: number) => {
+  const subtitle = filteredSubtitles.value[filteredIndex];
+  if (!subtitle) return {
+    status: "new" as const,
+    colorClass: "bg-yellow-400",
+    text: "Новый",
+  };
+
+  const status = subtitleStore.analyzedSubtitles.has(subtitle.text) ? "analyzed" : "new";
   return {
     status,
     colorClass: status === "analyzed" ? "bg-green-400" : "bg-yellow-400",
@@ -358,17 +366,6 @@ const selectSubtitle = (filteredIndex: number) => {
   }
 };
 
-/**
- * Возвращает статус анализа субтитра
- * @param index - индекс субтитра
- * @returns статус анализа ('analyzed' | 'new')
- */
-const getSubtitleStatus = (index: number): "analyzed" | "new" => {
-  const subtitle = subtitleStore.sentenceCards[index];
-  if (!subtitle) return "new";
-
-  return subtitleStore.analyzedSubtitles.has(subtitle.text) ? "analyzed" : "new";
-};
 
 const clearSearch = () => {
   searchQuery.value = "";
