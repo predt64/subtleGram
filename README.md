@@ -33,6 +33,7 @@ AI анализатор субтитров для изучения англий�
 ### Архитектура
 
 - **Feature-Sliced Design (FSD)** - Архитектурная методология
+- **Composition API** - Современные Vue 3 composables для переиспользования логики
 - **Монолитный frontend** - Vue.js приложение
 - **Pinia stores** - Централизованное управление состоянием
 - **Session Storage** - Persistence данных через VueUse
@@ -43,49 +44,48 @@ AI анализатор субтитров для изучения англий�
 ```
 subtleGram/
 ├── front/                          # Nuxt.js приложение (FSD архитектура)
-│   ├── src/
-│   │   ├── entities/
-│   │   │   └── subtitle/          # Сущность субтитров
-│   │   │       ├── lib/           # Логика обработки субтитров
-│   │   │       └── stores/        # Pinia store субтитров
-│   │   ├── features/
-│   │   │   └── file-upload/       # Функция загрузки файлов
-│   │   │       ├── lib/           # Бизнес-логика загрузки
-│   │   │       └── stores/        # Store состояния загрузки
-│   │   ├── shared/
-│   │   │   ├── api/               # API клиенты
-│   │   │   ├── lib/               # Утилиты (таймлайн, форматирование)
-│   │   │   └── types/             # TypeScript типы
-│   │   ├── widgets/               # UI компоненты
-│   │   │   ├── analysis-panel/    # Панель анализа текста
-│   │   │   ├── subtitle-timeline/ # Таймлайн субтитров
-│   │   │   └── workspace-*/       # Компоненты страницы с анализом
-│   │   └── pages/                 # Страницы приложения
-│   │       ├── index.vue          # Главная страница
-│   │       └── workspace.vue      # Страница с анализом
-│   ├── nuxt.config.ts             # Конфигурация Nuxt
-│   ├── tailwind.config.ts         # Конфигурация Tailwind
+│   ├── entities/
+│   │   └── subtitle/               # Сущность субтитров
+│   │       ├── lib/                # Логика обработки субтитров
+│   │       └── stores/             # Pinia store субтитров
+│   ├── features/
+│   │   └── file-upload/            # Функция загрузки файлов
+│   │       ├── lib/                # Бизнес-логика загрузки
+│   │       └── stores/             # Store состояния загрузки
+│   ├── shared/
+│   │   ├── api/                    # API клиенты
+│   │   ├── lib/                    # Утилиты (таймлайн, форматирование, clamp)
+│   │   └── types/                  # TypeScript типы
+│   ├── widgets/                    # UI компоненты
+│   │   ├── analysis-panel/         # Панель анализа текста
+│   │   ├── subtitle-timeline/      # Таймлайн субтитров
+│   │   │   ├── composables/        # Переиспользуемая логика компонента
+│   │   └── workspace-*/            # Компоненты страницы с анализом
+│   ├── pages/                      # Страницы приложения
+│   │   ├── index.vue               # Главная страница
+│   │   └── workspace.vue           # Страница с анализом
+│   ├── nuxt.config.ts              # Конфигурация Nuxt
+│   ├── tailwind.config.ts          # Конфигурация Tailwind
 │   └── package.json
 └── back/                           # Express.js API сервер
-    ├── src/
-    │   ├── controllers/            # Обработчики HTTP запросов
-    │   │   ├── analyzeController.ts    # Анализ текста
-    │   │   └── uploadController.ts     # Загрузка файлов
-    │   ├── routes/
-    │   │   └── subtitles.ts        # API маршруты субтитров
-    │   ├── services/               # Бизнес-логика
-    │   │   ├── analysisService.ts      # AI анализ
-    │   │   ├── openRouterService.ts    # OpenRouter API
-    │   │   ├── slangService.ts         # Urban Dictionary
-    │   │   └── subtitleParserService.ts # Парсинг субтитров
-    │   ├── types/                  # TypeScript определения
-    │   │   ├── index.ts            # Основные типы
-    │   │   └── openRouterTypes.ts  # Типы OpenRouter
-    │   └── utils/                  # Утилиты
-    │       ├── config.ts           # Конфигурация
-    │       ├── errorHandler.ts     # Обработка ошибок
-    │       └── validation.ts       # Валидация данных
-    ├── API-README.md               # Подробная документация API
+    ├── controllers/                 # Обработчики HTTP запросов
+    │   ├── analyzeController.ts     # Анализ текста
+    │   └── uploadController.ts      # Загрузка файлов
+    ├── routes/
+    │   └── subtitles.ts             # API маршруты субтитров
+    ├── services/                    # Бизнес-логика
+    │   ├── analysisService.ts       # AI анализ
+    │   ├── openRouterService.ts     # OpenRouter API
+    │   ├── slangService.ts          # Urban Dictionary
+    │   └── subtitleParserService.ts # Парсинг субтитров
+    ├── types/                       # TypeScript определения
+    │   ├── index.ts                 # Основные типы
+    │   └── openRouterTypes.ts       # Типы OpenRouter
+    ├── utils/                       # Утилиты
+    │   ├── config.ts                # Конфигурация
+    │   ├── errorHandler.ts          # Обработка ошибок
+    │   └── validation.ts            # Валидация данных
+    ├── API-README.md                # Подробная документация API
     └── package.json
 ```
 
