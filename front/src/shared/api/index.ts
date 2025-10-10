@@ -1,1 +1,1 @@
-export * from './subtitles'
+export * from './subtitleApi'

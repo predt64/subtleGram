@@ -1,1 +1,6 @@
 export { default as AnalysisPanel } from './AnalysisPanel.vue'
+export { default as AnalysisLoading } from './components/AnalysisLoading.vue'
+export { default as AnalysisError } from './components/AnalysisError.vue'
+export { default as TranslationSection } from './components/TranslationSection.vue'
+export { default as GrammarSection } from './components/GrammarSection.vue'
+export { default as SlangSection } from './components/SlangSection.vue'

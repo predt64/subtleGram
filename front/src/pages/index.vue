@@ -65,9 +65,7 @@
           <h3 class="mb-2 font-semibold text-white text-xl">
             Загружаем данные
           </h3>
-          <p class="text-slate-400">
-            Подготовка приложения...
-          </p>
+          <p class="text-slate-400">Подготовка приложения...</p>
         </div>
 
         <!-- Зона загрузки -->
@@ -274,10 +272,10 @@ const handleFileSelectClick = () => {
   // Отслеживаем фокус окна браузера
   const handleWindowFocus = () => {
     isFileDialogOpen.value = false;
-    window.removeEventListener('focus', handleWindowFocus);
+    window.removeEventListener("focus", handleWindowFocus);
   };
 
-  window.addEventListener('focus', handleWindowFocus);
+  window.addEventListener("focus", handleWindowFocus);
 };
 
 const goToWorkspace = async () => {

@@ -1,12 +1,7 @@
 import { computed } from 'vue'
-import { subtitlesApi, apiUtils } from '@/shared/api'
+import { subtitleApi } from '@/shared/api/subtitleApi'
 import { useSubtitleStore } from '@/entities/subtitle'
-import { useUploadStore } from '@/features/file-upload'
-
-/**
- * Состояния загрузки
- */
-export type UploadState = 'idle' | 'uploading' | 'success' | 'error'
+import { useUploadStore } from '@/features/file-upload/stores'
 
 /**
  * Composable для работы с загрузкой файлов субтитров
@@ -80,9 +75,9 @@ export function useFileUpload() {
     dragCounter = 0
     uploadStore.setDragOver(false)
 
-    const files = event.dataTransfer?.files
-    if (files && files.length > 0 && files[0]) {
-      handleFileSelect(files[0])
+    const file = event.dataTransfer?.files?.[0]
+    if (file) {
+      handleFileSelect(file)
     }
   }
 
@@ -107,15 +102,13 @@ export function useFileUpload() {
    * @param file - файл для проверки
    * @returns true если файл валиден
    */
-  const isValidSubtitleFile = (file: File | null): boolean => {
-    if (!file) return false
+  const isValidSubtitleFile = (file: File): boolean => {
+    const validExtensions = ['.srt', '.vtt', '.txt'] as const
+    const validMimeTypes = ['text/plain', 'text/vtt'] as const
 
-    const validExtensions = ['.srt', '.vtt', '.txt']
-    const validMimeTypes = ['text/plain', 'application/octet-stream', 'text/vtt']
-
-    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-    const isValidExtension = validExtensions.includes(fileExtension)
-    const isValidMimeType = validMimeTypes.includes(file.type)
+    const extension = file.name.toLowerCase().split('.').pop()
+    const isValidExtension = extension ? validExtensions.includes(extension as any) : false
+    const isValidMimeType = validMimeTypes.includes(file.type as any)
 
     return isValidExtension || isValidMimeType
   }
@@ -130,16 +123,21 @@ export function useFileUpload() {
     uploadStore.setUploading()
 
     try {
-      const result = await subtitlesApi.uploadFile(file)
+      const result = await subtitleApi.uploadFile(file)
 
-      subtitleStore.setSubtitles(result.data!.subtitles, result.data!.filename)
+      if (!result.data?.subtitles || !result.data?.filename) {
+        throw new Error('Некорректный ответ сервера')
+      }
+
+      subtitleStore.setSubtitles(result.data.subtitles, result.data.filename)
       uploadStore.setSuccess()
 
       console.log(`Файл "${subtitleStore.filename}" успешно загружен. Предложений: ${sentenceCards.value.length}`)
 
     } catch (err) {
-      console.error('Ошибка загрузки:', err)
-      uploadStore.setUploadError(apiUtils.handleApiError(err, 'Произошла ошибка при загрузке файла'))
+      console.error('Ошибка загрузки файла:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка при загрузке файла'
+      uploadStore.setUploadError(errorMessage)
     }
   }
 
@@ -160,7 +158,6 @@ export function useFileUpload() {
   const retry = (): void => {
     const file = uploadStore.uploadedFile
     if (file) {
-      uploadStore.setUploadedFile(file)
       uploadStore.setError(null)
       uploadFile()
     }

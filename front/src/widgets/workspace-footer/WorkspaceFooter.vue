@@ -115,76 +115,96 @@ const emit = defineEmits<{
 
 const subtitleStore = useSubtitleStore();
 
-const selectedSubtitleIndex = computed(() => props.modelValue ?? -1);
+/**
+ * Состояние навигации - унифицированная логика для работы с индексами
+ */
+const navigationState = computed(() => {
+  const originalIndex = props.modelValue ?? -1;
+  const isFiltered = !!subtitleStore.searchQuery;
+  const subtitles = isFiltered ? subtitleStore.filteredSubtitles : subtitleStore.sentenceCards;
 
-const currentSubtitles = computed(() =>
-  subtitleStore.searchQuery
-    ? subtitleStore.filteredSubtitles
-    : subtitleStore.sentenceCards
-);
+  let currentIndex = originalIndex;
+  if (isFiltered && originalIndex >= 0) {
+    currentIndex = subtitleStore.findFilteredIndex(
+      subtitleStore.sentenceCards[originalIndex]?.id || 0
+    );
+  }
 
-const filteredIndex = computed(() => {
-  if (selectedSubtitleIndex.value === -1) return -1;
-  if (!subtitleStore.searchQuery) return selectedSubtitleIndex.value;
-
-  return subtitleStore.findFilteredIndex(
-    subtitleStore.sentenceCards[selectedSubtitleIndex.value]?.id || 0
-  );
+  return {
+    originalIndex,
+    currentIndex,
+    subtitles,
+    isFiltered
+  };
 });
 
-const selectedSubtitle = computed(
-  () => filteredIndex.value >= 0 ? currentSubtitles.value[filteredIndex.value] : null
-);
+const selectedSubtitle = computed(() => {
+  const state = navigationState.value;
+  return state.currentIndex >= 0 ? state.subtitles[state.currentIndex] : null;
+});
 
-const previousSubtitle = computed(() =>
-  filteredIndex.value > 0
-    ? currentSubtitles.value[filteredIndex.value - 1]
-    : null
-);
+const previousSubtitle = computed(() => {
+  const state = navigationState.value;
+  return state.currentIndex > 0 ? state.subtitles[state.currentIndex - 1] : null;
+});
 
-const nextSubtitle = computed(() =>
-  filteredIndex.value >= 0 && filteredIndex.value < currentSubtitles.value.length - 1
-    ? currentSubtitles.value[filteredIndex.value + 1]
-    : null
-);
+const nextSubtitle = computed(() => {
+  const state = navigationState.value;
+  return state.currentIndex >= 0 && state.currentIndex < state.subtitles.length - 1
+    ? state.subtitles[state.currentIndex + 1]
+    : null;
+});
 
 /**
  * Состояние кнопки "Назад" для использования в template
  */
-const previousButtonState = computed(() => ({
-  disabled: filteredIndex.value <= 0,
-  classes:
-    filteredIndex.value <= 0
+const previousButtonState = computed(() => {
+  const state = navigationState.value;
+  const disabled = state.currentIndex <= 0;
+  return {
+    disabled,
+    classes: disabled
       ? "bg-slate-700/50 text-slate-500 cursor-not-allowed"
       : "bg-slate-700/80 text-slate-300 hover:bg-slate-700 hover:text-white",
-}));
+  };
+});
 
 /**
  * Состояние кнопки "Вперед" для использования в template
  */
-const nextButtonState = computed(() => ({
-  disabled: filteredIndex.value >= currentSubtitles.value.length - 1,
-  classes:
-    filteredIndex.value >= currentSubtitles.value.length - 1
+const nextButtonState = computed(() => {
+  const state = navigationState.value;
+  const disabled = state.currentIndex >= state.subtitles.length - 1;
+  return {
+    disabled,
+    classes: disabled
       ? "bg-slate-700/50 text-slate-500 cursor-not-allowed"
       : "bg-slate-700/80 text-slate-300 hover:bg-slate-700 hover:text-white",
-}));
+  };
+});
 
 /**
  * Информация о текущей позиции для отображения в индикаторе
  */
-const positionInfo = computed(() => ({
-  current: selectedSubtitleIndex.value === -1 ? 0 : filteredIndex.value + 1,
-  total: currentSubtitles.value.length,
-}));
+const positionInfo = computed(() => {
+  const state = navigationState.value;
+  return {
+    current: state.originalIndex === -1 ? 0 : state.currentIndex + 1,
+    total: state.subtitles.length,
+  };
+});
 
 /**
- * Переход к предыдущему субтитру в отфильтрованном списке
- * Вычисляет оригинальный индекс и обновляет modelValue
+ * Универсальная функция навигации по субтитрам
+ * @param direction - направление навигации
  */
-const goToPrevious = () => {
-  if (filteredIndex.value > 0) {
-    const targetSubtitle = currentSubtitles.value[filteredIndex.value - 1];
+const navigate = (direction: 'previous' | 'next') => {
+  const state = navigationState.value;
+  const offset = direction === 'next' ? 1 : -1;
+  const newIndex = state.currentIndex + offset;
+
+  if (newIndex >= 0 && newIndex < state.subtitles.length) {
+    const targetSubtitle = state.subtitles[newIndex];
     if (targetSubtitle) {
       const originalIndex = subtitleStore.sentenceCards.findIndex(
         (s) => s.id === targetSubtitle.id
@@ -197,37 +217,20 @@ const goToPrevious = () => {
 };
 
 /**
- * Переход к следующему субтитру в отфильтрованном списке
- * Вычисляет оригинальный индекс и обновляет modelValue
+ * Переход к предыдущему субтитру
  */
-const goToNext = () => {
-  if (filteredIndex.value < currentSubtitles.value.length - 1) {
-    const targetSubtitle = currentSubtitles.value[filteredIndex.value + 1];
-    if (targetSubtitle) {
-      const originalIndex = subtitleStore.sentenceCards.findIndex(
-        (s) => s.id === targetSubtitle.id
-      );
-      if (originalIndex !== -1) {
-        emit("update:modelValue", originalIndex);
-      }
-    }
-  }
-};
+const goToPrevious = () => navigate('previous');
+
+/**
+ * Переход к следующему субтитру
+ */
+const goToNext = () => navigate('next');
 </script>
 
 <style scoped>
-/* Workspace Footer стили */
 .workspace-footer {
   position: sticky;
   bottom: 0;
   z-index: 50;
-}
-
-.workspace-footer button:disabled {
-  opacity: 0.5;
-}
-
-.workspace-footer button:disabled:hover {
-  transform: none;
 }
 </style>

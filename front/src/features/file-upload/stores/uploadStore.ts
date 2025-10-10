@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, watch } from 'vue'
-import { useStorage } from '@vueuse/core'
+import { createSimpleStorage } from '@/shared/lib'
 import type { UploadState } from '@/shared/types'
 
 /**
- * Store для управления состоянием загрузки файлов
- * Хранит информацию о текущем состоянии загрузки, выбранном файле и ошибках
+ * Store для управления загрузкой файлов субтитров
+ *
+ * Управляет состоянием процесса загрузки, выбранными файлами и обработкой ошибок.
+ * Сохраняет состояние загрузки в sessionStorage
  */
 export const useUploadStore = defineStore('upload', () => {
   const uploadState = ref<UploadState>('idle')
@@ -19,17 +21,8 @@ export const useUploadStore = defineStore('upload', () => {
    */
   onMounted(() => {
     if (typeof window !== 'undefined') {
-      const uploadStateStorage = useStorage<UploadState>(
-        'uploadState',
-        'idle',
-        sessionStorage,
-        {
-          serializer: {
-            read: (v: string) => (v as UploadState) || 'idle',
-            write: (v: UploadState) => v
-          }
-        }
-      )
+      // Создаем storage с обработкой ошибок
+      const uploadStateStorage = createSimpleStorage<UploadState>('uploadState', 'idle')
 
       // Восстанавливаем сохраненное состояние
       uploadState.value = uploadStateStorage.value
@@ -61,23 +54,20 @@ export const useUploadStore = defineStore('upload', () => {
   // === ДЕЙСТВИЯ ===
 
   /**
-   * Устанавливает состояние загрузки
-   * @param state - новое состояние загрузки
-   */
-  const setUploadState = (state: UploadState) => {
-    uploadState.value = state
-  }
-
-  /**
-   * Устанавливает выбранный файл
-   * @param file - файл для загрузки или null
+   * Устанавливает выбранный файл для загрузки
+   * @param file - файл субтитров или null для сброса
+   * @throws {Error} если передан некорректный объект файла
    */
   const setUploadedFile = (file: File | null) => {
+    if (file !== null && !(file instanceof File)) {
+      throw new Error('Параметр file должен быть объектом File или null')
+    }
     uploadedFile.value = file
   }
 
   /**
-   * Устанавливает сообщение об ошибке
+   * Устанавливает сообщение об ошибке валидации
+   * Используется для ошибок, не связанных с процессом загрузки (например, неправильный тип файла)
    * @param errorMessage - текст ошибки или null для сброса
    */
   const setError = (errorMessage: string | null) => {
@@ -85,8 +75,8 @@ export const useUploadStore = defineStore('upload', () => {
   }
 
   /**
-   * Устанавливает состояние drag & drop
-   * @param over - находится ли курсор над зоной сброса
+   * Управляет состоянием drag & drop зоны
+   * @param over - true если курсор находится над зоной сброса файла
    */
   const setDragOver = (over: boolean) => {
     isDragOver.value = over
@@ -104,8 +94,8 @@ export const useUploadStore = defineStore('upload', () => {
   }
 
   /**
-   * Устанавливает состояние "загрузка начата"
-   * Автоматически сбрасывает предыдущие ошибки
+   * Переводит store в состояние активной загрузки
+   * Автоматически очищает предыдущие ошибки перед началом новой загрузки
    */
   const setUploading = () => {
     uploadState.value = 'uploading'
@@ -113,15 +103,17 @@ export const useUploadStore = defineStore('upload', () => {
   }
 
   /**
-   * Устанавливает состояние "загрузка завершена успешно"
+   * Переводит store в состояние успешного завершения загрузки
+   * Вызывается после успешной обработки файла на сервере
    */
   const setSuccess = () => {
     uploadState.value = 'success'
   }
 
   /**
-   * Устанавливает состояние ошибки загрузки
-   * @param errorMessage - сообщение об ошибке
+   * Переводит store в состояние ошибки загрузки
+   * Используется для ошибок, возникших во время HTTP запроса или обработки на сервере
+   * @param errorMessage - подробное описание ошибки для отображения пользователю
    */
   const setUploadError = (errorMessage: string) => {
     uploadState.value = 'error'
@@ -144,7 +136,6 @@ export const useUploadStore = defineStore('upload', () => {
     hasError,
 
     // Действия
-    setUploadState,
     setUploadedFile,
     setError,
     setDragOver,

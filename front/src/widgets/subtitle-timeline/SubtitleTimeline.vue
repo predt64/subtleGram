@@ -41,10 +41,7 @@
           </svg>
         </button>
       </div>
-      <p
-        v-if="hasActiveSearch"
-        class="mt-2 text-slate-400 text-xs"
-      >
+      <p v-if="hasActiveSearch" class="mt-2 text-slate-400 text-xs">
         Найдено: {{ filteredSubtitles.length }}
       </p>
     </div>
@@ -80,7 +77,10 @@
               :class="getSubtitleTextClasses(index)"
               v-html="
                 subtitleStore.searchQuery
-                  ? highlightSearchTerms(subtitle.text, subtitleStore.searchQuery)
+                  ? highlightSearchTerms(
+                      subtitle.text,
+                      subtitleStore.searchQuery
+                    )
                   : subtitle.text
               "
             ></div>
@@ -125,7 +125,10 @@
                 : "Субтитры не загружены"
             }}
           </p>
-          <p v-if="subtitleStore.searchQuery" class="mt-1 text-slate-500 text-xs">
+          <p
+            v-if="subtitleStore.searchQuery"
+            class="mt-1 text-slate-500 text-xs"
+          >
             Попробуйте другой поисковый запрос
           </p>
         </div>
@@ -135,124 +138,89 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useSubtitleStore } from "@/entities/subtitle";
-import TimelineScrollbar from './TimelineScrollbar.vue'
-import { parseTimeToMs, type SubtitleGeometry } from "@/shared/lib/timelineMarks";
+import TimelineScrollbar from "./TimelineScrollbar.vue";
+import { parseTimeToMs, clamp } from "@/shared/lib";
+import { useSubtitleNavigation } from "./composables/useSubtitleNavigation";
+import { useSubtitleGeometry } from "./composables/useSubtitleGeometry";
+import { useSubtitleSearch } from "./composables/useSubtitleSearch";
 
 const subtitleStore = useSubtitleStore();
 
-const searchQuery = ref(subtitleStore.searchQuery);
-
-const hasActiveSearch = computed(() => !!subtitleStore.searchQuery.trim());
-
-const timelineRef = ref<HTMLElement | null>(null)
-const containerHeight = ref(0)
-const currentScrollTop = ref(0)
-const scrollHeight = ref(0)
-const currentVisibleIndex = ref(0)
-const subtitleGeometry = ref<SubtitleGeometry[]>([])
+/**
+ * Ссылка на корневой элемент компонента
+ */
+const timelineRef = ref<HTMLElement | null>(null);
 
 /**
- * Определяет индекс верхнего видимого субтитра через DOM
- * Это обеспечивает точную синхронизацию скролла независимо от высоты элементов
+ * Высота видимой области контейнера субтитров
  */
-const getTopVisibleSubtitleIndex = (): number => {
-  const container = timelineContainer.value;
-  if (!container) return 0;
-  
-  const containerRect = container.getBoundingClientRect();
-  const containerTop = containerRect.top;
-  const elements = container.querySelectorAll('.subtitle-item');
-  
-  for (let i = 0; i < elements.length; i++) {
-    const el = elements[i];
-    if (!el) continue;
-    const rect = el.getBoundingClientRect();
-    // Если нижняя граница элемента ниже верха контейнера - это первый видимый
-    if (rect.bottom > containerTop + 5) { // +5px для небольшого порога
-      return i;
-    }
-  }
-  
-  return Math.max(0, elements.length - 1);
+const containerHeight = ref(0);
+
+/**
+ * Текущая позиция скролла контейнера
+ */
+const currentScrollTop = ref(0);
+
+/**
+ * Общая высота контента контейнера (включая прокручиваемую часть)
+ */
+const scrollHeight = ref(0);
+
+/**
+ * Обрабатывает событие скролла контейнера субтитров
+ * Обновляет текущую позицию скролла и определяет видимый субтитр
+ * @param e - событие скролла от контейнера
+ */
+const updateScroll = (e: Event): void => {
+  const target = e.target as HTMLElement;
+  currentScrollTop.value = target.scrollTop;
+  scrollHeight.value = target.scrollHeight;
+
+  // Обновляем индекс видимого субтитра при скролле
+  currentVisibleIndex.value = getTopVisibleSubtitleIndex(target);
 };
 
 /**
- * Собирает реальную геометрию субтитров из DOM
- * Используется для точного позиционирования меток на скроллбаре
+ * Обрабатывает внешнюю команду изменения позиции скролла
+ * Используется скроллбаром для программного управления прокруткой
+ * @param newTop - новая позиция скролла в пикселях
  */
-const getSubtitleGeometry = (): SubtitleGeometry[] => {
+const handleExternalScrollTop = (newTop: number): void => {
   const container = timelineContainer.value;
-  if (!container) return [];
-  
-  const elements = container.querySelectorAll('.subtitle-item');
-  const geometry: SubtitleGeometry[] = [];
-  
-  for (let i = 0; i < elements.length; i++) {
-    const el = elements[i] as HTMLElement;
-    if (!el) continue;
-    geometry.push({
-      index: i,
-      top: el.offsetTop,
-      height: el.offsetHeight
+  if (!container) return;
+  const maxTop = Math.max(0, container.scrollHeight - container.clientHeight);
+  const clamped = clamp(newTop, 0, maxTop);
+  if (Math.abs(container.scrollTop - clamped) > 1) {
+    scrollInProgress = true;
+    container.scrollTo({ top: clamped, behavior: "auto" });
+    requestAnimationFrame(() => {
+      scrollInProgress = false;
+      // Обновляем индекс видимого субтитра после программной прокрутки
+      currentVisibleIndex.value = getTopVisibleSubtitleIndex(container);
     });
   }
-  
-  return geometry;
 };
 
 /**
- * Обновляет геометрию субтитров после рендера
+ * Ссылка на контейнер субтитров для управления скроллом
  */
-const updateGeometry = () => {
-  nextTick(() => {
-    subtitleGeometry.value = getSubtitleGeometry();
-  });
-};
-
-const seekToTime = (timeMs: number) => {
-  const cards = filteredSubtitles.value;
-  if (!cards.length) return;
-  let targetIndex = cards.findIndex(
-    (c) => parseTimeToMs(c.start || "00:00:00") >= timeMs
-  );
-  if (targetIndex < 0) targetIndex = cards.length - 1;
-  scrollToSubtitle(targetIndex);
-};
-
-const updateScroll = (e: Event) => {
-  const target = e.target as HTMLElement
-  currentScrollTop.value = target.scrollTop
-  scrollHeight.value = target.scrollHeight
-  
-  // Обновляем индекс видимого субтитра при скролле
-  currentVisibleIndex.value = getTopVisibleSubtitleIndex()
-}
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
-
-const handleExternalScrollTop = (newTop: number) => {
-  const container = timelineContainer.value
-  if (!container) return
-  const maxTop = Math.max(0, container.scrollHeight - container.clientHeight)
-  const clamped = clamp(newTop, 0, maxTop)
-  if (Math.abs(container.scrollTop - clamped) > 1) {
-    scrollInProgress = true
-    container.scrollTo({ top: clamped, behavior: 'auto' })
-    requestAnimationFrame(() => {
-      scrollInProgress = false
-      // Обновляем индекс видимого субтитра после программной прокрутки
-      currentVisibleIndex.value = getTopVisibleSubtitleIndex()
-    })
-  }
-}
-
 const timelineContainer = ref<HTMLElement>();
+
+/**
+ * Массив ссылок на DOM элементы субтитров для быстрого доступа
+ */
 const subtitleRefs = ref<(HTMLElement | null)[]>([]);
 
+/**
+ * Флаг предотвращения одновременных анимаций скролла
+ */
 let scrollInProgress = false;
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Наблюдатель за изменениями размера контейнера
+ */
 let resizeObserver: ResizeObserver | null = null;
 
 interface Props {
@@ -286,6 +254,28 @@ const filteredSubtitles = computed(() => {
   return subtitleStore.filteredSubtitles;
 });
 
+const {
+  searchQuery,
+  hasActiveSearch,
+  highlightSearchTerms,
+  clearSearch,
+  setupSearchWatcher,
+  cleanup: cleanupSearch,
+} = useSubtitleSearch();
+
+const {
+  subtitleGeometry,
+  currentVisibleIndex,
+  getTopVisibleSubtitleIndex,
+  updateGeometry,
+} = useSubtitleGeometry();
+
+const { selectSubtitle, handleKeydown, seekToTime } = useSubtitleNavigation(
+  () => filteredSubtitles.value,
+  () => highlightedIndex.value,
+  emit
+);
+
 /**
  * Вычисляет классы для элемента субтитра в зависимости от его состояния
  */
@@ -316,13 +306,16 @@ const getSubtitleTextClasses = (index: number) => {
  */
 const getSubtitleStatusData = (filteredIndex: number) => {
   const subtitle = filteredSubtitles.value[filteredIndex];
-  if (!subtitle) return {
-    status: "new" as const,
-    colorClass: "bg-yellow-400",
-    text: "Новый",
-  };
+  if (!subtitle)
+    return {
+      status: "new" as const,
+      colorClass: "bg-yellow-400",
+      text: "Новый",
+    };
 
-  const status = subtitleStore.analyzedSubtitles.has(subtitle.text) ? "analyzed" : "new";
+  const status = subtitleStore.analyzedSubtitles.has(subtitle.text)
+    ? "analyzed"
+    : "new";
   return {
     status,
     colorClass: status === "analyzed" ? "bg-green-400" : "bg-yellow-400",
@@ -330,57 +323,12 @@ const getSubtitleStatusData = (filteredIndex: number) => {
   };
 };
 
-/**
- * Подсвечивает поисковые термины в тексте субтитра
- * @param text - исходный текст субтитра
- * @param query - поисковый запрос
- * @returns HTML строка с подсвеченными терминами
- */
-const highlightSearchTerms = (text: string, query: string): string => {
-  if (!query) return text;
-
-  const regex = new RegExp(
-    `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-    "gi"
-  );
-  return text.replace(
-    regex,
-    '<mark class="bg-yellow-400 px-1 rounded text-slate-900">$1</mark>'
-  );
-};
+// Настраиваем watcher для поиска
+setupSearchWatcher();
 
 /**
- * Выбирает субтитр по индексу в отфильтрованном массиве
- * Находит соответствующий субтитр в оригинальном массиве и обновляет modelValue
- * @param filteredIndex - индекс в отфильтрованном массиве
+ * Следит за изменениями списка субтитров и обновляет размеры контейнера
  */
-const selectSubtitle = (filteredIndex: number) => {
-  const subtitle = filteredSubtitles.value[filteredIndex];
-  if (subtitle) {
-    const originalIndex = subtitleStore.sentenceCards.findIndex(
-      (s) => s.id === subtitle.id
-    );
-    if (originalIndex !== -1) {
-      emit("update:modelValue", originalIndex);
-    }
-  }
-};
-
-
-const clearSearch = () => {
-  searchQuery.value = "";
-};
-
-watch(searchQuery, (newQuery) => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    const trimmedQuery = newQuery.trim();
-    if (subtitleStore.searchQuery !== trimmedQuery) {
-      subtitleStore.setSearchQuery(trimmedQuery);
-    }
-  }, 300);
-});
-
 watch(
   () => [filteredSubtitles.value.length, hasActiveSearch.value],
   () => {
@@ -388,20 +336,17 @@ watch(
       const container = timelineContainer.value;
       if (!container) return;
 
-      const newContainerHeight = container.clientHeight;
-      const newScrollHeight = container.scrollHeight;
+      containerHeight.value = container.clientHeight;
+      scrollHeight.value = container.scrollHeight;
 
-      containerHeight.value = newContainerHeight;
-      scrollHeight.value = newScrollHeight;
-
-      const maxTop = Math.max(0, newScrollHeight - newContainerHeight);
+      // Корректируем позицию скролла если она выходит за пределы
+      const maxTop = Math.max(0, scrollHeight.value - containerHeight.value);
       if (currentScrollTop.value > maxTop) {
         currentScrollTop.value = maxTop;
         container.scrollTop = maxTop;
       }
-      
-      // Обновляем геометрию после изменения списка субтитров
-      updateGeometry();
+
+      updateGeometry(timelineContainer.value);
     });
   }
 );
@@ -411,118 +356,46 @@ watch(
  * Предотвращает одновременные анимации прокрутки
  * @param index - индекс субтитра в отфильтрованном массиве
  */
-const scrollToSubtitle = (index: number) => {
+const scrollToSubtitle = (index: number): void => {
   if (!timelineContainer.value || scrollInProgress) return;
-
   if (index < 0 || index >= filteredSubtitles.value.length) return;
 
+  const element = subtitleRefs.value[index];
+  if (!element) return;
+
   scrollInProgress = true;
+  const container = timelineContainer.value;
 
-  const tryScroll = () => {
-    const element = subtitleRefs.value[index];
-    if (!element || !element.offsetTop) {
-      setTimeout(tryScroll, 50);
-      return;
-    }
+  const elementTop = element.offsetTop;
+  const elementHeight = element.offsetHeight;
+  const containerHeight = container.offsetHeight;
 
-    const container = timelineContainer.value;
-    if (!container) {
-      scrollInProgress = false;
-      return;
-    }
+  const scrollTop = clamp(
+    elementTop - containerHeight / 2 + elementHeight / 2,
+    0,
+    container.scrollHeight - containerHeight
+  );
 
-    const elementTop = element.offsetTop;
-    const elementHeight = element.offsetHeight;
-    const containerHeight = container.offsetHeight;
+  container.scrollTo({
+    top: scrollTop,
+    behavior: "smooth",
+  });
 
-    const scrollTop = elementTop - containerHeight / 2 + elementHeight / 2;
-
-    if (
-      scrollTop >= 0 &&
-      scrollTop <= container.scrollHeight - containerHeight
-    ) {
-      container.scrollTo({
-        top: scrollTop,
-        behavior: "smooth",
-      });
-
-      setTimeout(() => {
-        scrollInProgress = false;
-      }, 300);
-    } else {
-      scrollInProgress = false;
-    }
-  };
-
-  tryScroll();
+  setTimeout(() => {
+    scrollInProgress = false;
+  }, 300);
 };
 
 /**
  * Устанавливает ссылку на DOM элемент субтитра для доступа к нему
  * @param filteredIndex - индекс в отфильтрованном массиве
- * @param el - DOM элемент субтитра
+ * @param el - DOM элемент или компонент Vue
  */
-const setSubtitleRef = (filteredIndex: number, el: any) => {
+const setSubtitleRef = (filteredIndex: number, el: any): void => {
   subtitleRefs.value[filteredIndex] = el as HTMLElement | null;
 };
 
-/**
- * Обрабатывает клавиатурную навигацию по субтитрам
- * Поддерживает стрелки вверх/вниз для навигации по отфильтрованному массиву
- * @param event - событие клавиатуры
- */
-const handleKeydown = (event: KeyboardEvent) => {
-  // Не перехватываем клавиши, если фокус в поле поиска
-  if (event.target instanceof HTMLInputElement && event.target.type === 'text') {
-    return;
-  }
-
-  if (!filteredSubtitles.value.length) return;
-
-  // Находим текущий индекс в отфильтрованном массиве
-  const currentFilteredIndex = highlightedIndex.value;
-  let newFilteredIndex = currentFilteredIndex;
-
-  switch (event.key) {
-    case "ArrowUp":
-      event.preventDefault();
-      newFilteredIndex = Math.max(0, currentFilteredIndex - 1);
-      break;
-    case "ArrowDown":
-      event.preventDefault();
-      newFilteredIndex = Math.min(filteredSubtitles.value.length - 1, currentFilteredIndex + 1);
-      break;
-    case "Enter":
-    case " ":
-      event.preventDefault();
-      break;
-  }
-
-  if (newFilteredIndex !== currentFilteredIndex && newFilteredIndex >= 0) {
-    // Преобразуем индекс в отфильтрованном массиве в индекс в полном массиве
-    const targetSubtitle = filteredSubtitles.value[newFilteredIndex];
-    if (targetSubtitle) {
-      const originalIndex = subtitleStore.sentenceCards.findIndex(
-        (s) => s.id === targetSubtitle.id
-      );
-      if (originalIndex !== -1) {
-        emit("update:modelValue", originalIndex);
-      }
-    }
-  }
-};
-
-watch(
-  () => subtitleStore.searchQuery,
-  (newQuery) => {
-    if (searchQuery.value !== newQuery) {
-      searchQuery.value = newQuery;
-    }
-    if (newQuery && subtitleStore.filteredSubtitles.length > 0) {
-      setTimeout(() => scrollToSubtitle(0), 100);
-    }
-  }
-);
+// Watcher для поиска обрабатывается в useSubtitleSearch composable
 
 watch(
   () => props.modelValue,
@@ -542,38 +415,44 @@ watch(
       }, 100);
     }
   },
-  { immediate: true }  // Добавляем immediate: true для начальной загрузки
+  { immediate: true } // Добавляем immediate: true для начальной загрузки
 );
 
+/**
+ * Инициализация компонента - добавляем обработчики событий и обсервера
+ */
 onMounted(() => {
-  document.addEventListener("keydown", handleKeydown)
+  document.addEventListener("keydown", handleKeydown);
 
   resizeObserver = new ResizeObserver(() => {
     if (timelineContainer.value) {
-      containerHeight.value = timelineContainer.value.clientHeight
-      scrollHeight.value = timelineContainer.value.scrollHeight
-      // Обновляем геометрию при ресайзе
-      updateGeometry()
+      containerHeight.value = timelineContainer.value.clientHeight;
+      scrollHeight.value = timelineContainer.value.scrollHeight;
+      updateGeometry(timelineContainer.value);
     }
-  })
-  if (timelineContainer.value) resizeObserver.observe(timelineContainer.value)
+  });
 
-  // Initial calc
   if (timelineContainer.value) {
-    containerHeight.value = timelineContainer.value.clientHeight
-    scrollHeight.value = timelineContainer.value.scrollHeight
-    // Инициализируем индекс видимого субтитра и геометрию
-    currentVisibleIndex.value = getTopVisibleSubtitleIndex()
-    updateGeometry()
+    resizeObserver.observe(timelineContainer.value);
+    // Инициализация размеров и геометрии
+    containerHeight.value = timelineContainer.value.clientHeight;
+    scrollHeight.value = timelineContainer.value.scrollHeight;
+    currentVisibleIndex.value = getTopVisibleSubtitleIndex(
+      timelineContainer.value
+    );
+    updateGeometry(timelineContainer.value);
   }
-})
+});
 
+/**
+ * Очистка ресурсов перед размонтированием компонента
+ */
 onBeforeUnmount(() => {
-  document.removeEventListener("keydown", handleKeydown)
-  scrollInProgress = false
-  if (searchTimeout) clearTimeout(searchTimeout)
-  if (resizeObserver) resizeObserver.disconnect()
-})
+  document.removeEventListener("keydown", handleKeydown);
+  scrollInProgress = false;
+  cleanupSearch();
+  if (resizeObserver) resizeObserver.disconnect();
+});
 </script>
 
 <style scoped>

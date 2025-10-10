@@ -47,7 +47,7 @@ export interface SentenceCard {
  */
 export interface NormalizeOptions {
   /**
-   * Максимальное количество слов в «предложении без терминатора». 
+   * Максимальное количество слов в «предложении без терминатора».
    * Если превышено и нет .?!… на конце — деградация: не делим, используем исходные куски.
    */
   maxWordsWithoutPunct?: number
@@ -329,5 +329,4 @@ function isLikelyAbbreviation(text: string, opts: Required<NormalizeOptions>): b
 
   return false
 }
-
 

@@ -2,7 +2,7 @@
   <div
     class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen text-white workspace"
   >
-    <!-- Экран загрузки при восстановлении данных -->
+    <!-- Состояние: загрузка данных из sessionStorage -->
     <div v-if="isLoading" class="flex justify-center items-center h-screen">
       <div class="text-center">
         <div class="relative mb-6">
@@ -24,16 +24,12 @@
             </svg>
           </div>
         </div>
-        <h2 class="mb-2 font-semibold text-white text-xl">
-          Загружаем данные
-        </h2>
-        <p class="text-slate-400">
-          Подготовка приложения...
-        </p>
+        <h2 class="mb-2 font-semibold text-white text-xl">Загружаем данные</h2>
+        <p class="text-slate-400">Подготовка приложения...</p>
       </div>
     </div>
 
-    <!-- Если нет данных после загрузки, показываем заглушку -->
+    <!-- Состояние: нет загруженных субтитров -->
     <div v-else-if="!hasData" class="flex justify-center items-center h-screen">
       <div class="text-center">
         <div
@@ -68,7 +64,7 @@
       </div>
     </div>
 
-    <!-- Основное рабочее пространство -->
+    <!-- Состояние: основной рабочий интерфейс -->
     <div v-else class="flex flex-col h-screen">
       <!-- Workspace Header -->
       <WorkspaceHeader @search="handleSearch" />
@@ -106,20 +102,13 @@ import {
 
 const subtitleStore = useSubtitleStore();
 
+// Константы для специальных значений состояния
+const NO_SELECTION = -1 as const;
+
 const selectedSubtitleIndex = ref<number | undefined>(undefined);
 
 const hasData = computed(() => subtitleStore.hasSubtitles);
 const isLoading = computed(() => subtitleStore.isLoading);
-
-watch(
-  hasData,
-  (newHasData) => {
-    if (newHasData && selectedSubtitleIndex.value === undefined) {
-      selectedSubtitleIndex.value = -1;
-    }
-  },
-  { immediate: true }
-);
 
 /**
  * Переход на главную страницу загрузки файлов
@@ -137,6 +126,16 @@ const goToMainPage = async () => {
 const handleSearch = (query: string) => {
   subtitleStore.setSearchQuery(query);
 };
+
+watch(
+  hasData,
+  (newHasData) => {
+    if (newHasData && selectedSubtitleIndex.value === undefined) {
+      selectedSubtitleIndex.value = NO_SELECTION;
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -145,13 +144,7 @@ const handleSearch = (query: string) => {
   min-height: 100vh;
 }
 
-.workspace-content {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* Анимация вращения по часовой стрелке */
+/* Анимация вращения в обратную сторону для загрузки */
 .animate-spin-reverse {
   animation: spin-reverse 1s linear infinite;
 }

@@ -1,14 +1,23 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onMounted, watch } from 'vue'
-import { useStorage } from '@vueuse/core'
+import { createJsonStorage } from '@/shared/lib'
 import type { SubtitleFile } from '@/shared/types'
-import type { SentenceCard } from '@/shared/lib/normalizeToSentences'
-import { normalizeToSentences } from '@/shared/lib/normalizeToSentences'
-import { parseTimeToMs } from '@/shared/lib/timelineMarks';
+import type { SentenceCard } from '@/entities/subtitle/lib/normalizeToSentences'
+import { normalizeToSentences } from '@/entities/subtitle/lib/normalizeToSentences'
+import { parseTimeToMs } from '@/shared/lib/timelineMarks'
+
+// Константы для ключей sessionStorage
+const STORAGE_KEYS = {
+  RAW_SUBTITLES: 'rawSubtitles',
+  FILENAME: 'filename',
+  ANALYZED_SUBTITLES: 'analyzedSubtitles'
+} as const
 
 /**
- * Store для управления субтитрами
- * Хранит массив субтитров, имя файла и текущую позицию навигации
+ * Store для управления субтитрами и предложениями
+ *
+ * Управляет загрузкой, хранением и поиском субтитров. Автоматически сохраняет данные
+ * в sessionStorage
  */
 export const useSubtitleStore = defineStore('subtitle', () => {
   const rawSubtitles = ref<SubtitleFile[]>([])
@@ -19,7 +28,7 @@ export const useSubtitleStore = defineStore('subtitle', () => {
   const analyzedSubtitles = ref<Set<string>>(new Set())
 
   // Флаг загрузки данных из sessionStorage
-  // Начинаем с true всегда - показываем loading пока не загрузим данные
+  // Начинаем с true - показываем loading пока не загрузим данные
   const isLoading = ref(true)
 
   /**
@@ -28,74 +37,25 @@ export const useSubtitleStore = defineStore('subtitle', () => {
    */
   onMounted(() => {
     if (typeof window !== 'undefined') {
-      // Проверяем, есть ли сохраненные данные
-      const hasStoredData = sessionStorage.getItem('rawSubtitles') !== null
-      const rawSubtitlesStorage = useStorage<SubtitleFile[]>(
-        'rawSubtitles',
-        [],
-        sessionStorage,
-        {
-          serializer: {
-            read: (v: string) => {
-              try {
-                return v ? JSON.parse(v) : []
-              } catch {
-                return []
-              }
-            },
-            write: (v: SubtitleFile[]) => JSON.stringify(v)
-          }
-        }
-      )
-
-      // Storage для имени файла
-      const filenameStorage = useStorage<string>(
-        'filename',
-        '',
-        sessionStorage,
-        {
-          serializer: {
-            read: (v: string) => v || '',
-            write: (v: string) => v
-          }
-        }
-      )
-
-      // Storage для проанализированных субтитров
-      const analyzedSubtitlesStorage = useStorage<string[]>(
-        'analyzedSubtitles',
-        [],
-        sessionStorage,
-        {
-          serializer: {
-            read: (v: string) => {
-              try {
-                return v ? JSON.parse(v) : []
-              } catch {
-                return []
-              }
-            },
-            write: (v: string[]) => JSON.stringify(v)
-          }
-        }
-      )
+      // Создаем storage с обработкой ошибок
+      const rawSubtitlesStorage = createJsonStorage<SubtitleFile[]>(STORAGE_KEYS.RAW_SUBTITLES, [])
+      const filenameStorage = createJsonStorage<string>(STORAGE_KEYS.FILENAME, '')
+      const analyzedSubtitlesStorage = createJsonStorage<string[]>(STORAGE_KEYS.ANALYZED_SUBTITLES, [])
 
       // Восстанавливаем сохраненные данные
       rawSubtitles.value = rawSubtitlesStorage.value
       filename.value = filenameStorage.value
       analyzedSubtitles.value = new Set(analyzedSubtitlesStorage.value)
 
-      // Автоматически сохраняем изменения сырых субтитров
+      // Автоматически сохраняем изменения
       watch(rawSubtitles, (newValue) => {
         rawSubtitlesStorage.value = newValue
       }, { deep: true })
 
-      // Автоматически сохраняем изменения имени файла
       watch(filename, (newValue) => {
         filenameStorage.value = newValue
       })
 
-      // Автоматически сохраняем изменения проанализированных субтитров
       watch(analyzedSubtitles, (newValue) => {
         analyzedSubtitlesStorage.value = Array.from(newValue)
       }, { deep: true })
@@ -118,12 +78,16 @@ export const useSubtitleStore = defineStore('subtitle', () => {
    * Карточки предложений вычисляются на лету из сырых субтитров
    * Ничего не сохраняем — при перезагрузке страницы пересчитаем
    */
-  const sentenceCards = computed<SentenceCard[]>(() => {
-    return normalizeToSentences(rawSubtitles.value)
-  })
+  const sentenceCards = computed<SentenceCard[]>(() => normalizeToSentences(rawSubtitles.value))
 
   const totalDurationMs = computed(() => {
-    return sentenceCards.value.reduce((max, card) => Math.max(max, parseTimeToMs(card.end || '00:00:00')), 0);
+    if (!sentenceCards.value.length) return 0
+
+    // Находим максимальное время окончания среди всех карточек
+    // (субтитры могут быть не отсортированы по времени)
+    return Math.max(...sentenceCards.value.map(card =>
+      parseTimeToMs(card.end || '00:00:00')
+    ))
   })
 
   /**
@@ -146,8 +110,16 @@ export const useSubtitleStore = defineStore('subtitle', () => {
    * @param newFilename - имя файла субтитров
    */
   const setSubtitles = (newSubtitles: SubtitleFile[], newFilename: string = '') => {
-    rawSubtitles.value = newSubtitles
-    if (newFilename) filename.value = newFilename
+    try {
+      if (!Array.isArray(newSubtitles)) {
+        throw new Error('newSubtitles must be an array')
+      }
+
+      rawSubtitles.value = newSubtitles
+      if (newFilename) filename.value = newFilename
+    } catch (error) {
+      console.error('Failed to set subtitles:', error)
+    }
   }
 
   /**
@@ -174,7 +146,6 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     filename.value = ''
     searchQuery.value = ''
     analyzedSubtitles.value.clear()
-    // Сохранение происходит автоматически через watchers
   }
 
   /**
@@ -183,13 +154,13 @@ export const useSubtitleStore = defineStore('subtitle', () => {
    * @returns индекс в отфильтрованном массиве или -1 если не найден
    */
   const findFilteredIndex = (subtitleId: number): number => {
-    // Если нет поиска, возвращаем индекс в полном списке карточек
+    // Если нет поиска, ищем в полном массиве предложений
     if (!searchQuery.value) {
       const card = sentenceCards.value.find(s => s.id === subtitleId)
       return card ? sentenceCards.value.indexOf(card) : -1
     }
 
-    // Находим индекс в отфильтрованном массиве
+    // При поиске ищем в отфильтрованном массиве
     const filtered = filteredSubtitles.value
     const idx = filtered.findIndex(s => s.id === subtitleId)
     return idx >= 0 ? idx : -1

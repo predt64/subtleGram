@@ -2,17 +2,16 @@
   <div
     class="timeline"
     role="slider"
-    aria-label="Subtitle timeline scrollbar"
+    aria-label="Скроллбар таймлайна субтитров"
     :aria-valuemin="0"
     :aria-valuemax="totalMs"
     :aria-valuenow="currentTimeMs"
     ref="rootEl"
     @mousedown="onMouseDown"
     @mousemove="onMouseMove"
-    @mouseleave="onMouseLeave"
     @mouseup="onDragEnd"
   >
-    <!-- Draggable handle representing viewport -->
+    <!-- Перетаскиваемая полоска, представляющая видимую область -->
     <div
       class="handle"
       :class="{ dragging: isDragging }"
@@ -21,7 +20,7 @@
       @click.stop
     />
 
-    <!-- Tooltip on drag -->
+    <!-- Всплывающая подсказка при перетаскивании -->
     <div
       v-if="isDragging && showMarks"
       class="tooltip"
@@ -29,14 +28,14 @@
     >
       {{ formattedTooltipTime }}
     </div>
-    <!-- Marks -->
+    <!-- Метки таймлайна -->
     <div
       v-for="mark in marks"
       :key="`${mark.subtitleIndex}-${mark.timeMs}`"
       class="mark"
       :class="{ major: mark.isMajor, minor: !mark.isMajor }"
       :style="{ top: `${markTopPx(mark)}px` }"
-      :aria-label="mark.label ? `Subtitle at ${mark.label}` : 'Minor tick'"
+      :aria-label="mark.label ? `Субтитр в ${mark.label}` : 'Дополнительная метка'"
     >
       <div class="tick" />
       <span v-if="mark.isMajor" class="label">{{ mark.label }}</span>
@@ -52,13 +51,14 @@ import {
   type TimelineMark,
   type SubtitleGeometry,
 } from "@/shared/lib/timelineMarks";
+import type { SentenceCard } from "@/entities/subtitle/lib/normalizeToSentences";
 
 interface Props {
   totalMs: number;
   containerHeight: number;
   scrollTop: number;
   totalScrollHeight: number;
-  subtitles: any[]; // TODO: type as SentenceCard[]
+  subtitles: SentenceCard[]; // массив предложений для отображения
   subtitleGeometry: SubtitleGeometry[]; // реальная геометрия из DOM
   currentVisibleIndex: number; // индекс верхнего видимого субтитра
   showMarks?: boolean;
@@ -89,25 +89,52 @@ const marks = computed<TimelineMark[]>(() => {
   );
 });
 
-// Internal interaction state
+/**
+ * Внутреннее состояние взаимодействия с компонентом
+ * Управляет перетаскиванием и предварительным просмотром позиции
+ */
 const rootEl = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
 const dragStartY = ref(0);
 const dragStartScrollTop = ref(0);
-const hoverY = ref<number | null>(null);
 const previewScrollTop = ref<number | null>(null);
-const suppressClickUntil = ref(0);
 
-// Helpers
+/**
+ * Вспомогательные функции для математических расчетов
+ */
+
+/**
+ * Ограничивает значение в заданных пределах
+ * @param value - значение для ограничения
+ * @param min - минимальное значение
+ * @param max - максимальное значение
+ * @returns ограниченное значение
+ */
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
-const deltaYToScrollTop = (deltaY: number, base: number) => {
+
+/**
+ * Конвертирует изменение координаты Y в позицию скролла
+ * @param deltaY - изменение координаты по вертикали (в пикселях)
+ * @param base - базовая позиция скролла (в пикселях)
+ * @returns новая позиция скролла в пикселях
+ */
+const deltaYToScrollTop = (deltaY: number, base: number): number => {
+  // Соотношение между полной высотой контента и видимой областью
   const ratio = (props.totalScrollHeight || 1) / (props.containerHeight || 1);
   return base + deltaY * ratio;
 };
 
-// Events
-const getLocalYFromClient = (clientY: number) => {
+/**
+ * Обработчики событий взаимодействия с пользователем
+ */
+
+/**
+ * Конвертирует глобальную координату Y в локальную относительно скроллбара
+ * @param clientY - глобальная координата Y от верхнего края viewport
+ * @returns локальная координата Y относительно элемента скроллбара
+ */
+const getLocalYFromClient = (clientY: number): number => {
   const el = rootEl.value;
   if (!el) return 0;
   const rect = el.getBoundingClientRect();
@@ -115,18 +142,17 @@ const getLocalYFromClient = (clientY: number) => {
 };
 
 const onMouseDown = (e: MouseEvent) => {
-  console.log('onMouseDown');
-  // Ignore if clicking on handle (handle has its own mousedown handler)
+  // Игнорируем клик по handle (у него свой обработчик mousedown)
   if ((e.target as HTMLElement)?.classList.contains('handle')) return;
 
   const y = getLocalYFromClient(e.clientY);
-  // Calculate new handle position based on click Y
+  // Вычисляем новую позицию handle на основе клика по Y координате
   const newHandleTop = clamp(y - handleHeight.value / 2, 0, maxHandleTop.value);
   const scrollable = Math.max(1, props.totalScrollHeight - props.containerHeight);
   const ratio = newHandleTop / maxHandleTop.value;
   const newScrollTop = Math.floor(ratio * scrollable);
 
-  // Start dragging from the new position
+  // Начинаем перетаскивание с новой позиции
   isDragging.value = true;
   dragStartY.value = y;
   dragStartScrollTop.value = newScrollTop;
@@ -156,7 +182,6 @@ const onDragStart = (e: MouseEvent) => {
 
 const onMouseMove = (e: MouseEvent) => {
   if (!isDragging.value) {
-    hoverY.value = getLocalYFromClient(e.clientY);
     return;
   }
   const deltaY = getLocalYFromClient(e.clientY) - dragStartY.value;
@@ -173,13 +198,8 @@ const onDragEnd = () => {
   if (!isDragging.value) return;
   isDragging.value = false;
   previewScrollTop.value = null;
-  suppressClickUntil.value = Date.now() + 250;
   window.removeEventListener('mousemove', onWindowMouseMove);
   window.removeEventListener('mouseup', onWindowMouseUp);
-};
-
-const onMouseLeave = () => {
-  hoverY.value = null;
 };
 
 const onWindowMouseMove = (e: MouseEvent) => {
@@ -199,19 +219,25 @@ const onWindowMouseUp = () => {
   onDragEnd();
 };
 
-// Effective scrollTop for live preview
+/**
+ * Эффективная позиция скролла для предварительного просмотра
+ * Использует previewScrollTop при перетаскивании, иначе props.scrollTop
+ */
 const effectiveScrollTop = computed(() =>
   previewScrollTop.value !== null ? previewScrollTop.value : props.scrollTop
 );
 
-// Handle geometry (viewport representation)
+/**
+ * Геометрия handle (представление видимой области)
+ * Определяет соотношение видимой области к общему контенту
+ */
 const viewportRatio = computed(() => {
   if (props.totalScrollHeight <= 0 || props.containerHeight <= 0) return 1;
   return Math.min(1, props.containerHeight / props.totalScrollHeight);
 });
 
 const handleHeight = computed(() => {
-  // Keep it reasonably long, min 48px
+  // Поддерживаем разумную высоту, минимум 48px для удобства захвата
   const h = props.containerHeight * viewportRatio.value;
   return Math.max(48, Math.floor(h));
 });
@@ -225,8 +251,13 @@ const handleTop = computed(() => {
   return clamp(Math.floor(ratio * maxHandleTop.value), 0, maxHandleTop.value);
 });
 
-const markTopPx = (mark: TimelineMark) => {
-  // Используем реальную позицию из DOM, если доступна
+/**
+ * Вычисляет позицию метки на скроллбаре в пикселях
+ * @param mark - метка таймлайна с информацией о позиции
+ * @returns позиция метки в пикселях относительно верха скроллбара
+ */
+const markTopPx = (mark: TimelineMark): number => {
+  // Используем реальную позицию из DOM, если доступна (точный расчет)
   if (mark.realTopPx !== undefined) {
     // Конвертируем offsetTop контейнера в позицию на скроллбаре
     const scrollable = Math.max(1, props.totalScrollHeight - props.containerHeight);
@@ -234,22 +265,24 @@ const markTopPx = (mark: TimelineMark) => {
     const ratio = mark.realTopPx / Math.max(1, scrollable);
     return Math.floor(handleHeight.value / 2 + ratio * usable);
   }
-  
-  // Fallback: используем индекс субтитра
+
+  // Fallback: используем индекс субтитра для грубого позиционирования
   const ratio = mark.subtitleIndex / Math.max(1, props.subtitles.length - 1);
   const usable = Math.max(1, props.containerHeight - handleHeight.value);
   return Math.floor(handleHeight.value / 2 + ratio * usable);
 };
 
-// Tooltip time formatting - показываем время текущего видимого субтитра
+/**
+ * Форматирование времени для tooltip - показываем время текущего видимого субтитра
+ */
 const useHours = computed(() => props.totalMs >= 3600000);
 const currentTimeMs = computed(() => {
   if (props.subtitles.length === 0) return 0;
-  
+
   // Используем реальный индекс видимого субтитра из DOM
   const index = clamp(props.currentVisibleIndex, 0, props.subtitles.length - 1);
   const subtitle = props.subtitles[index];
-  
+
   if (!subtitle || !subtitle.start) return 0;
   return parseTimeToMs(subtitle.start);
 });
@@ -261,12 +294,12 @@ const formattedTooltipTime = computed(() => formatTime(currentTimeMs.value, useH
   position: sticky;
   top: 0;
   height: 100%;
-  inline-size: 72px; /* fixed width to avoid content-based expansion */
+  inline-size: 72px; /* фиксированная ширина для предотвращения расширения контентом */
   min-inline-size: 64px;
   padding: 0 8px;
-  background-color: #1e293b; /* slate-800 */
-  border-right: 1px solid #334155; /* slate-700 */
-  overflow: visible; /* allow tooltip to overflow */
+  background-color: #1e293b; /* slate-800 - темный фон */
+  border-right: 1px solid #334155; /* slate-700 - серая правая граница */
+  overflow: visible; /* разрешаем tooltip выходить за границы */
   user-select: none;
 }
 
@@ -280,8 +313,8 @@ const formattedTooltipTime = computed(() => formatTime(currentTimeMs.value, useH
   gap: 6px;
   font-family: monospace;
   font-size: 12px;
-  color: #94a3b8; /* slate-400 */
-  overflow: hidden; /* prevent horizontal bleed */
+  color: #94a3b8; /* slate-400 - светло-серый цвет */
+  overflow: hidden; /* предотвращаем горизонтальное переполнение */
   transform: translateY(-50%);
   transition:
     color 0.2s,
@@ -309,19 +342,19 @@ const formattedTooltipTime = computed(() => formatTime(currentTimeMs.value, useH
 }
 
 .minor {
-  color: transparent; /* Hide label */
+  color: transparent; /* Скрываем текст метки */
 }
 
 .minor .tick {
-  background: #475569; /* slate-600 for minor ticks */
+  background: #475569; /* slate-600 для дополнительных меток */
 }
 
-/* Draggable handle */
+/* Перетаскиваемая полоска скроллбара */
 .handle {
   position: absolute;
   left: 0;
   width: 100%;
-  background: rgba(148, 163, 184, 0.25); /* slate-400 @ 25% */
+  background: rgba(148, 163, 184, 0.25); /* slate-400 с прозрачностью 25% */
   border-radius: 4px;
   cursor: default;
   z-index: 20;
@@ -334,15 +367,15 @@ const formattedTooltipTime = computed(() => formatTime(currentTimeMs.value, useH
   background: rgba(148, 163, 184, 0.55);
 }
 
-/* Tooltip to the right of handle */
+/* Всплывающая подсказка справа от полоски */
 .tooltip {
   position: absolute;
   left: calc(100% + 8px);
   transform: translateY(-50%);
   padding: 4px 8px;
-  background: #0f172a; /* slate-950 */
-  color: #e2e8f0; /* slate-200 */
-  border: 1px solid #334155; /* slate-700 */
+  background: #0f172a; /* slate-950 - темный фон */
+  color: #e2e8f0; /* slate-200 - светлый текст */
+  border: 1px solid #334155; /* slate-700 - серая граница */
   border-radius: 4px;
   font-family: monospace;
   font-size: 12px;
