@@ -103,10 +103,11 @@ export function useFileUpload() {
    * @returns true если файл валиден
    */
   const isValidSubtitleFile = (file: File): boolean => {
-    const validExtensions = ['.srt', '.vtt', '.txt'] as const
+    const validExtensions = ['srt', 'vtt', 'txt'] as const
     const validMimeTypes = ['text/plain', 'text/vtt'] as const
 
     const extension = file.name.toLowerCase().split('.').pop()
+    console.log('isValidSubtitleFile', extension)
     const isValidExtension = extension ? validExtensions.includes(extension as any) : false
     const isValidMimeType = validMimeTypes.includes(file.type as any)
 
