@@ -126,3 +126,14 @@ export type AnalysisState =
   | 'analyzing' // Идет анализ текста ИИ
   | 'success'   // Анализ завершен успешно
   | 'error'     // Произошла ошибка анализа
+
+/**
+ * Глобальные типы для работы с Nuxt
+ */
+declare global {
+  interface Window {
+    $nuxt?: {
+      isDemo: string
+    }
+  }
+}

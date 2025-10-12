@@ -19,6 +19,25 @@
       >
         Интерактивный анализ субтитров
       </p>
+
+      <!-- Уведомление о демо-режиме -->
+      <div
+        v-if="isDemo"
+        class="bg-yellow-500/10 mx-auto mt-6 p-4 border border-yellow-500/20 rounded-xl max-w-md"
+      >
+        <div class="flex items-center gap-3">
+          <svg class="flex-shrink-0 w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          <div class="text-left">
+            <p class="font-medium text-yellow-400 text-sm">Демо-версия</p>
+            <p class="text-yellow-400/80 text-xs">
+              Загрузка работает, но анализ использует примерные данные.
+              Запустите локально для полного функционала.
+            </p>
+          </div>
+        </div>
+      </div>
     </header>
 
     <!-- Основной блок -->
@@ -251,6 +270,14 @@ const {
   reset,
   retry,
 } = useFileUpload();
+
+/**
+ * Проверка демо-режима для отображения уведомления
+ */
+const isDemo = computed(() => {
+  if (typeof window === 'undefined') return false;
+  return window.$nuxt?.isDemo === 'true';
+})
 
 const isFileDialogOpen = ref(false);
 

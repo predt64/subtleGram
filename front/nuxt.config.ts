@@ -40,9 +40,33 @@ export default defineNuxtConfig({
   nitro: {
     compressPublicAssets: true,
     minify: true,
+    prerender: {
+      routes: ['/workspace']
+    }
   },
 
   tailwindcss: {
     configPath: '~/tailwind.config.ts'
+  },
+
+  app: {
+    head: {
+      script: [
+        {
+          innerHTML: `
+            window.$nuxt = {
+              isDemo: '${process.env.NUXT_PUBLIC_IS_DEMO || 'false'}'
+            }
+          `
+        }
+      ]
+    }
+  },
+
+  // Настройки для SPA на GitHub Pages
+  router: {
+    options: {
+      hashMode: false
+    }
   }
 })

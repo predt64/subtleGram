@@ -1,5 +1,6 @@
 export * from './timelineMarks'
 export * from './storage'
+export * from '@/shared/mocks'
 
 /**
  * Ограничивает значение в заданных пределах

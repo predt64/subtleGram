@@ -10,6 +10,10 @@ import type {
   AnalyzeResponseData
 } from '@/shared/types'
 
+import {
+  getRandomMockAnalysis
+} from '@/shared/lib'
+
 /**
  * Создает AbortController с таймаутом для автоматической отмены запроса
  * @param timeoutMs - время ожидания в миллисекундах (по умолчанию 30 секунд)
@@ -69,10 +73,35 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 export const subtitleApi = {
   /**
    * Загружает файл субтитров на сервер для обработки
+   * В демо-режиме возвращает моковые субтитры
    * @param file - файл субтитров в формате SRT, VTT или TXT
    * @returns Promise с данными загруженного файла или ошибкой
    */
   async uploadFile(file: File): Promise<ApiResponse<UploadResponseData>> {
+    // Демо-режим: возвращаем моковые субтитры вместо загрузки файла
+    if (window.$nuxt?.isDemo === 'true') {
+      return new Promise((resolve) => {
+        import('@/shared/lib').then(({ mockSentenceCards }) => {
+          // Имитируем задержку загрузки файла (2-4 секунды)
+          const delay = Math.random() * 2000 + 2000;
+
+          setTimeout(() => {
+            resolve({
+              success: true,
+              message: "Файл успешно загружен (демо-режим)",
+              data: {
+                filename: file.name,
+                subtitlesCount: mockSentenceCards.length,
+                subtitles: mockSentenceCards
+              }
+            });
+
+            console.log('uploadFile', mockSentenceCards)
+          }, delay);
+        });
+      });
+    }
+
     const formData = new FormData()
     formData.append('file', file)
 
@@ -96,6 +125,7 @@ export const subtitleApi = {
 
   /**
    * Отправляет текст предложения на анализ с помощью ИИ
+   * В демо-режиме возвращает моковые данные
    * @param sentenceText - текст предложения для анализа
    * @param context - контекст предложения (предыдущее и следующее предложения)
    * @param seriesName - название сериала для улучшения анализа
@@ -108,6 +138,57 @@ export const subtitleApi = {
     seriesName?: string,
     signal?: AbortSignal
   ): Promise<ApiResponse<AnalyzeResponseData>> {
+    // Демо-режим: возвращаем моковые данные через случайную задержку
+    if (window.$nuxt?.isDemo === 'true') {
+      return new Promise((resolve) => {
+        const mockData = getRandomMockAnalysis();
+        // Имитируем задержку API (1-3 секунды)
+        const delay = Math.random() * 2000 + 1000;
+
+        setTimeout(() => {
+          resolve({
+            success: true,
+            message: "Анализ завершен (демо-режим)",
+            data: {
+              analysis: {
+                text: sentenceText,
+                cefr: "B1",
+                features: [{
+                  rule: "Present Simple",
+                  russian: "Настоящее простое время"
+                }],
+                translations: [
+                  {
+                    style: "natural",
+                    text: mockData.translation.natural
+                  },
+                  {
+                    style: "literal",
+                    text: mockData.translation.literal
+                  }
+                ],
+                explanation: mockData.explanation,
+                slang: mockData.slang.map(s => ({
+                  term: s.term,
+                  ud: {
+                    definition: s.definition,
+                    example: s.example,
+                    permalink: `https://urbandictionary.com/define.php?term=${encodeURIComponent(s.term)}`
+                  }
+                }))
+              },
+              metadata: {
+                processingTimeMs: Math.floor(delay),
+                timestamp: new Date().toISOString(),
+                model: "demo-model",
+                validationWarnings: []
+              }
+            }
+          });
+        }, delay);
+      });
+    }
+
     const requestData = {
       sentenceText,
       context: context || { prev: '', next: '' },

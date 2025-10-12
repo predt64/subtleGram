@@ -9,6 +9,24 @@
 -->
 <template>
   <div class="p-6 analysis-panel">
+    <!-- Уведомление о демо-режиме -->
+    <div
+      v-if="isDemo"
+      class="bg-yellow-500/10 mb-4 p-3 border border-yellow-500/20 rounded-lg"
+    >
+      <div class="flex items-center gap-2">
+        <svg class="flex-shrink-0 w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+          <p class="font-medium text-yellow-600 text-sm">Демо-режим</p>
+          <p class="text-yellow-600/80 text-xs">
+            Это демо-версия с примерными данными анализа.
+            Для полного функционала запустите проект локально с API сервером.
+          </p>
+        </div>
+      </div>
+    </div>
     <!-- Состояние: нет выбранного субтитра -->
     <div
       v-if="!selectedSubtitle"
@@ -107,8 +125,6 @@ import { useSubtitleStore } from "@/entities/subtitle";
 import { subtitleApi } from "@/shared/api/subtitleApi";
 import type {
   AnalysisState,
-  GrammarFeature,
-  SlangCard,
   AnalyzeResponseData,
 } from "@/shared/types";
 import AnalysisLoading from "./components/AnalysisLoading.vue";
@@ -127,6 +143,14 @@ const emit = defineEmits<{
 }>();
 
 const subtitleStore = useSubtitleStore();
+
+/**
+ * Проверка демо-режима для отображения уведомления
+ */
+const isDemo = computed(() => {
+  if (typeof window === 'undefined') return false;
+  return window.$nuxt?.isDemo === 'true';
+})
 
 /**
  * Преобразует ошибку API в понятное пользователю сообщение
