@@ -91,6 +91,13 @@ export const useUploadStore = defineStore('upload', () => {
     uploadedFile.value = null
     error.value = null
     isDragOver.value = false
+
+    // Явно очищаем sessionStorage чтобы файл не восстановился при перезагрузке
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('uploadState')
+      sessionStorage.removeItem('uploadedFile')
+      sessionStorage.removeItem('uploadError')
+    }
   }
 
   /**

@@ -146,6 +146,13 @@ export const useSubtitleStore = defineStore('subtitle', () => {
     filename.value = ''
     searchQuery.value = ''
     analyzedSubtitles.value.clear()
+
+    // Очищаем sessionStorage чтобы данные не восстановились при перезагрузке
+    if (typeof window !== 'undefined') {
+      Object.values(STORAGE_KEYS).forEach(key => {
+        sessionStorage.removeItem(key)
+      })
+    }
   }
 
   /**

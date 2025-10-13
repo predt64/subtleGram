@@ -157,15 +157,7 @@ const onMouseDown = (e: MouseEvent) => {
   dragStartY.value = y;
   dragStartScrollTop.value = newScrollTop;
 
-  // Вычисляем время ближайшего субтитра и перемещаем
-  if (props.subtitles.length > 0) {
-    const subtitleIndex = Math.round(ratio * (props.subtitles.length - 1));
-    const clampedIndex = clamp(subtitleIndex, 0, props.subtitles.length - 1);
-    const subtitle = props.subtitles[clampedIndex];
-    const timeMs = subtitle?.start ? parseTimeToMs(subtitle.start) : 0;
-    emit("updateScrollTop", newScrollTop);
-    emit("seek", timeMs);
-  }
+  emit("updateScrollTop", newScrollTop);
 
   e.preventDefault();
   window.addEventListener('mousemove', onWindowMouseMove);
