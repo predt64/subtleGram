@@ -307,13 +307,21 @@ const handleFileSelectClick = async () => {
   await nextTick();
   isFileDialogOpen.value = true;
 
-  // Отслеживаем фокус окна браузера
-  const handleWindowFocus = () => {
+  // Отслеживаем изменения в input элементе для корректного сброса флага
+  const handleInputChange = () => {
     isFileDialogOpen.value = false;
-    window.removeEventListener("focus", handleWindowFocus);
+    fileInput.value?.removeEventListener('change', handleInputChange);
+    fileInput.value?.removeEventListener('blur', handleInputCancel);
   };
 
-  window.addEventListener("focus", handleWindowFocus);
+  const handleInputCancel = () => {
+    isFileDialogOpen.value = false;
+    fileInput.value?.removeEventListener('change', handleInputChange);
+    fileInput.value?.removeEventListener('blur', handleInputCancel);
+  };
+
+  fileInput.value?.addEventListener('change', handleInputChange);
+  fileInput.value?.addEventListener('blur', handleInputCancel);
 };
 
 const goToWorkspace = async () => {
