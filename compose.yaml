@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./back
+    ports:
+      - "3001:3001"        # Слева порт компа, справа порт контейнера
+    env_file:
+      - ./back/.env        # Берем переменные окружения из .env файла бэка
+    environment:
+      - PORT=3001
+
+  frontend:
+    build: ./front
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend            # Фронт запустится только после бэка
+    environment:
+      - PORT=3000
